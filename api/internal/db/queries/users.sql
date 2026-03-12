@@ -1,23 +1,20 @@
 -- name: ListUsers :many
-SELECT app_user_id, username, can_create, can_update, can_delete, is_meta
+SELECT app_user_id, username, role_id
 FROM app_user
 ORDER BY app_user_id;
 
 -- name: CreateUser :one
-INSERT INTO app_user (username, password_hash, can_create, can_update, can_delete, is_meta)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING app_user_id, username, can_create, can_update, can_delete, is_meta;
+INSERT INTO app_user (username, password_hash, role_id)
+VALUES (@username, @password_hash, @role_id)
+RETURNING app_user_id, username, role_id;
 
 -- name: UpdateUser :one
 UPDATE app_user
 SET
-    username   = COALESCE(sqlc.narg(username),   username),
-    can_create = COALESCE(sqlc.narg(can_create), can_create),
-    can_update = COALESCE(sqlc.narg(can_update), can_update),
-    can_delete = COALESCE(sqlc.narg(can_delete), can_delete),
-    is_meta    = COALESCE(sqlc.narg(is_meta),    is_meta)
+    username = COALESCE(sqlc.narg(username), username),
+    role_id  = COALESCE(sqlc.narg(role_id),  role_id)
 WHERE app_user_id = sqlc.arg(app_user_id)
-RETURNING app_user_id, username, can_create, can_update, can_delete, is_meta;
+RETURNING app_user_id, username, role_id;
 
 -- name: DeleteUser :exec
 DELETE FROM app_user

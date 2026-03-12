@@ -6,7 +6,6 @@ package dbsqlc
 
 import (
 	"database/sql/driver"
-	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgtype"
@@ -15,6 +14,7 @@ import (
 type AuditEventEnum string
 
 const (
+	AuditEventEnumCreated AuditEventEnum = "created"
 	AuditEventEnumUpdated AuditEventEnum = "updated"
 	AuditEventEnumDeleted AuditEventEnum = "deleted"
 )
@@ -52,48 +52,6 @@ func (ns NullAuditEventEnum) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.AuditEventEnum), nil
-}
-
-type ComputerTypeEnum string
-
-const (
-	ComputerTypeEnumDesktop ComputerTypeEnum = "desktop"
-	ComputerTypeEnumLaptop  ComputerTypeEnum = "laptop"
-)
-
-func (e *ComputerTypeEnum) Scan(src interface{}) error {
-	switch s := src.(type) {
-	case []byte:
-		*e = ComputerTypeEnum(s)
-	case string:
-		*e = ComputerTypeEnum(s)
-	default:
-		return fmt.Errorf("unsupported scan type for ComputerTypeEnum: %T", src)
-	}
-	return nil
-}
-
-type NullComputerTypeEnum struct {
-	ComputerTypeEnum ComputerTypeEnum `json:"computer_type_enum"`
-	Valid            bool             `json:"valid"` // Valid is true if ComputerTypeEnum is not NULL
-}
-
-// Scan implements the Scanner interface.
-func (ns *NullComputerTypeEnum) Scan(value interface{}) error {
-	if value == nil {
-		ns.ComputerTypeEnum, ns.Valid = "", false
-		return nil
-	}
-	ns.Valid = true
-	return ns.ComputerTypeEnum.Scan(value)
-}
-
-// Value implements the driver Valuer interface.
-func (ns NullComputerTypeEnum) Value() (driver.Value, error) {
-	if !ns.Valid {
-		return nil, nil
-	}
-	return string(ns.ComputerTypeEnum), nil
 }
 
 type RamTypeEnum string
@@ -138,6 +96,48 @@ func (ns NullRamTypeEnum) Value() (driver.Value, error) {
 		return nil, nil
 	}
 	return string(ns.RamTypeEnum), nil
+}
+
+type ShiftEnum string
+
+const (
+	ShiftEnumMorning   ShiftEnum = "morning"
+	ShiftEnumAfternoon ShiftEnum = "afternoon"
+)
+
+func (e *ShiftEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ShiftEnum(s)
+	case string:
+		*e = ShiftEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ShiftEnum: %T", src)
+	}
+	return nil
+}
+
+type NullShiftEnum struct {
+	ShiftEnum ShiftEnum `json:"shift_enum"`
+	Valid     bool      `json:"valid"` // Valid is true if ShiftEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullShiftEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.ShiftEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ShiftEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullShiftEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ShiftEnum), nil
 }
 
 type StorageTypeEnum string
@@ -188,10 +188,24 @@ type AppUser struct {
 	AppUserID    int64  `json:"app_user_id"`
 	Username     string `json:"username"`
 	PasswordHash string `json:"password_hash"`
-	CanCreate    bool   `json:"can_create"`
-	CanUpdate    bool   `json:"can_update"`
-	CanDelete    bool   `json:"can_delete"`
-	IsMeta       bool   `json:"is_meta"`
+	RoleID       string `json:"role_id"`
+}
+
+type AuditLog struct {
+	AuditID            int64              `json:"audit_id"`
+	TableName          string             `json:"table_name"`
+	RecordID           int64              `json:"record_id"`
+	EventType          AuditEventEnum     `json:"event_type"`
+	OldValues          []byte             `json:"old_values"`
+	NewValues          []byte             `json:"new_values"`
+	ChangedByAppUserID int64              `json:"changed_by_app_user_id"`
+	ChangedByUsername  string             `json:"changed_by_username"`
+	ChangedAt          pgtype.Timestamptz `json:"changed_at"`
+}
+
+type Brand struct {
+	BrandID int64  `json:"brand_id"`
+	Name    string `json:"name"`
 }
 
 type Center struct {
@@ -202,40 +216,48 @@ type Center struct {
 type Computer struct {
 	ComputerID         int64              `json:"computer_id"`
 	Hostname           string             `json:"hostname"`
-	CpuID              pgtype.Int8        `json:"cpu_id"`
-	RamGb              int32              `json:"ram_gb"`
-	RamType            RamTypeEnum        `json:"ram_type"`
-	StorageGb          int32              `json:"storage_gb"`
-	StorageType        StorageTypeEnum    `json:"storage_type"`
-	ComputerType       ComputerTypeEnum   `json:"computer_type"`
-	Observations       pgtype.Text        `json:"observations"`
-	EquipmentUserID    pgtype.Int8        `json:"equipment_user_id"`
 	RoomID             pgtype.Int8        `json:"room_id"`
-	MacAddress         pgtype.Text        `json:"mac_address"`
+	Observations       pgtype.Text        `json:"observations"`
 	CreatedByAppUserID int64              `json:"created_by_app_user_id"`
 	CreatedAt          pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 }
 
-type ComputerAudit struct {
-	AuditID            int64              `json:"audit_id"`
-	EventType          AuditEventEnum     `json:"event_type"`
-	ComputerID         int64              `json:"computer_id"`
-	OldValues          json.RawMessage    `json:"old_values"`
-	NewValues          []byte             `json:"new_values"`
-	ChangedByAppUserID int64              `json:"changed_by_app_user_id"`
-	ChangedAt          pgtype.Timestamptz `json:"changed_at"`
-}
-
-type ComputerO struct {
-	ComputerID int64 `json:"computer_id"`
-	OsID       int64 `json:"os_id"`
-}
-
 type Cpu struct {
 	CpuID          int64       `json:"cpu_id"`
-	ModelName      pgtype.Text `json:"model_name"`
+	ModelName      string      `json:"model_name"`
 	BenchmarkScore pgtype.Int4 `json:"benchmark_score"`
+}
+
+type Cycle struct {
+	CycleID int64  `json:"cycle_id"`
+	Name    string `json:"name"`
+}
+
+type Desktop struct {
+	ComputerID      int64               `json:"computer_id"`
+	DesktopModelID  pgtype.Int8         `json:"desktop_model_id"`
+	CpuID           pgtype.Int8         `json:"cpu_id"`
+	RamGb           pgtype.Int4         `json:"ram_gb"`
+	RamType         NullRamTypeEnum     `json:"ram_type"`
+	StorageGb       pgtype.Int4         `json:"storage_gb"`
+	StorageType     NullStorageTypeEnum `json:"storage_type"`
+	OsID            pgtype.Int8         `json:"os_id"`
+	EquipmentUserID pgtype.Int8         `json:"equipment_user_id"`
+	HasWifiCard     bool                `json:"has_wifi_card"`
+	MacAddress      pgtype.Text         `json:"mac_address"`
+}
+
+type DesktopModel struct {
+	DesktopModelID  int64           `json:"desktop_model_id"`
+	BrandID         int64           `json:"brand_id"`
+	ModelName       string          `json:"model_name"`
+	CpuID           pgtype.Int8     `json:"cpu_id"`
+	BaseRamGb       int32           `json:"base_ram_gb"`
+	BaseRamType     RamTypeEnum     `json:"base_ram_type"`
+	BaseStorageGb   int32           `json:"base_storage_gb"`
+	BaseStorageType StorageTypeEnum `json:"base_storage_type"`
+	BaseOsID        pgtype.Int8     `json:"base_os_id"`
 }
 
 type EquipmentUser struct {
@@ -243,13 +265,65 @@ type EquipmentUser struct {
 	Name            string `json:"name"`
 }
 
+type Laptop struct {
+	ComputerID      int64               `json:"computer_id"`
+	LaptopModelID   int64               `json:"laptop_model_id"`
+	RamGb           pgtype.Int4         `json:"ram_gb"`
+	RamType         NullRamTypeEnum     `json:"ram_type"`
+	StorageGb       pgtype.Int4         `json:"storage_gb"`
+	StorageType     NullStorageTypeEnum `json:"storage_type"`
+	MacAddress      pgtype.Text         `json:"mac_address"`
+	OsID            pgtype.Int8         `json:"os_id"`
+	EquipmentUserID pgtype.Int8         `json:"equipment_user_id"`
+}
+
+type LaptopModel struct {
+	LaptopModelID   int64           `json:"laptop_model_id"`
+	BrandID         int64           `json:"brand_id"`
+	ModelName       string          `json:"model_name"`
+	CpuID           pgtype.Int8     `json:"cpu_id"`
+	BaseRamGb       int32           `json:"base_ram_gb"`
+	BaseRamType     RamTypeEnum     `json:"base_ram_type"`
+	BaseStorageGb   int32           `json:"base_storage_gb"`
+	BaseStorageType StorageTypeEnum `json:"base_storage_type"`
+	BaseOsID        pgtype.Int8     `json:"base_os_id"`
+}
+
+type LaptopStudentAssignment struct {
+	AssignmentID int64  `json:"assignment_id"`
+	ComputerID   int64  `json:"computer_id"`
+	StudentID    int64  `json:"student_id"`
+	ClassID      int64  `json:"class_id"`
+	AcademicYear string `json:"academic_year"`
+}
+
 type O struct {
 	OsID int64  `json:"os_id"`
 	Name string `json:"name"`
+}
+
+type Role struct {
+	RoleID      string `json:"role_id"`
+	Description string `json:"description"`
 }
 
 type Room struct {
 	RoomID   int64  `json:"room_id"`
 	CenterID int64  `json:"center_id"`
 	Name     string `json:"name"`
+}
+
+type SchoolClass struct {
+	ClassID        int64       `json:"class_id"`
+	CycleID        int64       `json:"cycle_id"`
+	Course         int16       `json:"course"`
+	ClassLabel     string      `json:"class_label"`
+	Shift          ShiftEnum   `json:"shift"`
+	TutorAppUserID pgtype.Int8 `json:"tutor_app_user_id"`
+}
+
+type Student struct {
+	StudentID int64  `json:"student_id"`
+	FullName  string `json:"full_name"`
+	ClassID   int64  `json:"class_id"`
 }

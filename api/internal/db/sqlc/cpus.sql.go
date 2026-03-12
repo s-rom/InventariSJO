@@ -18,7 +18,7 @@ RETURNING cpu_id, model_name, benchmark_score
 `
 
 type CreateCPUParams struct {
-	ModelName      pgtype.Text `json:"model_name"`
+	ModelName      string      `json:"model_name"`
 	BenchmarkScore pgtype.Int4 `json:"benchmark_score"`
 }
 

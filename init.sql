@@ -1,3 +1,5 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
 -- ============================================================
 -- ENUM TYPES
 -- ============================================================
@@ -58,7 +60,7 @@ CREATE INDEX ON room (center_id);
 -- ============================================================
 CREATE TABLE cpu (
     cpu_id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    model_name      TEXT UNIQUE,
+    model_name      TEXT NOT NULL UNIQUE,
     benchmark_score INTEGER
 );
 
@@ -301,7 +303,6 @@ CREATE TABLE laptop_student_assignment (
     class_id      BIGINT NOT NULL REFERENCES school_class (class_id),
     academic_year TEXT NOT NULL CHECK (academic_year ~ '^\d{4}-\d{4}$'),
 
-    UNIQUE (computer_id, student_id, academic_year),
     -- Un alumne només pot tenir un portàtil per any acadèmic
     UNIQUE (student_id, academic_year)
 );
@@ -404,3 +405,9 @@ INSERT INTO cycle (name) VALUES
 ('DAW'),
 ('DAM'),
 ('FPB-Administracio');
+
+-- Usuari administrador per defecte
+INSERT INTO role (role_id, description) VALUES ('admin', 'Administrador') ON CONFLICT DO NOTHING;
+INSERT INTO app_user (username, password_hash, role_id)
+VALUES ('admin', crypt('admin', gen_salt('bf')), 'admin')
+ON CONFLICT (username) DO NOTHING;

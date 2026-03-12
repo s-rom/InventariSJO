@@ -12,47 +12,27 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO app_user (username, password_hash, can_create, can_update, can_delete, is_meta)
-VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING app_user_id, username, can_create, can_update, can_delete, is_meta
+INSERT INTO app_user (username, password_hash, role_id)
+VALUES ($1, $2, $3)
+RETURNING app_user_id, username, role_id
 `
 
 type CreateUserParams struct {
 	Username     string `json:"username"`
 	PasswordHash string `json:"password_hash"`
-	CanCreate    bool   `json:"can_create"`
-	CanUpdate    bool   `json:"can_update"`
-	CanDelete    bool   `json:"can_delete"`
-	IsMeta       bool   `json:"is_meta"`
+	RoleID       string `json:"role_id"`
 }
 
 type CreateUserRow struct {
 	AppUserID int64  `json:"app_user_id"`
 	Username  string `json:"username"`
-	CanCreate bool   `json:"can_create"`
-	CanUpdate bool   `json:"can_update"`
-	CanDelete bool   `json:"can_delete"`
-	IsMeta    bool   `json:"is_meta"`
+	RoleID    string `json:"role_id"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (CreateUserRow, error) {
-	row := q.db.QueryRow(ctx, createUser,
-		arg.Username,
-		arg.PasswordHash,
-		arg.CanCreate,
-		arg.CanUpdate,
-		arg.CanDelete,
-		arg.IsMeta,
-	)
+	row := q.db.QueryRow(ctx, createUser, arg.Username, arg.PasswordHash, arg.RoleID)
 	var i CreateUserRow
-	err := row.Scan(
-		&i.AppUserID,
-		&i.Username,
-		&i.CanCreate,
-		&i.CanUpdate,
-		&i.CanDelete,
-		&i.IsMeta,
-	)
+	err := row.Scan(&i.AppUserID, &i.Username, &i.RoleID)
 	return i, err
 }
 
@@ -67,7 +47,7 @@ func (q *Queries) DeleteUser(ctx context.Context, appUserID int64) error {
 }
 
 const listUsers = `-- name: ListUsers :many
-SELECT app_user_id, username, can_create, can_update, can_delete, is_meta
+SELECT app_user_id, username, role_id
 FROM app_user
 ORDER BY app_user_id
 `
@@ -75,10 +55,7 @@ ORDER BY app_user_id
 type ListUsersRow struct {
 	AppUserID int64  `json:"app_user_id"`
 	Username  string `json:"username"`
-	CanCreate bool   `json:"can_create"`
-	CanUpdate bool   `json:"can_update"`
-	CanDelete bool   `json:"can_delete"`
-	IsMeta    bool   `json:"is_meta"`
+	RoleID    string `json:"role_id"`
 }
 
 func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
@@ -90,14 +67,7 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 	var items []ListUsersRow
 	for rows.Next() {
 		var i ListUsersRow
-		if err := rows.Scan(
-			&i.AppUserID,
-			&i.Username,
-			&i.CanCreate,
-			&i.CanUpdate,
-			&i.CanDelete,
-			&i.IsMeta,
-		); err != nil {
+		if err := rows.Scan(&i.AppUserID, &i.Username, &i.RoleID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)
@@ -111,50 +81,27 @@ func (q *Queries) ListUsers(ctx context.Context) ([]ListUsersRow, error) {
 const updateUser = `-- name: UpdateUser :one
 UPDATE app_user
 SET
-    username   = COALESCE($1,   username),
-    can_create = COALESCE($2, can_create),
-    can_update = COALESCE($3, can_update),
-    can_delete = COALESCE($4, can_delete),
-    is_meta    = COALESCE($5,    is_meta)
-WHERE app_user_id = $6
-RETURNING app_user_id, username, can_create, can_update, can_delete, is_meta
+    username = COALESCE($1, username),
+    role_id  = COALESCE($2,  role_id)
+WHERE app_user_id = $3
+RETURNING app_user_id, username, role_id
 `
 
 type UpdateUserParams struct {
 	Username  pgtype.Text `json:"username"`
-	CanCreate pgtype.Bool `json:"can_create"`
-	CanUpdate pgtype.Bool `json:"can_update"`
-	CanDelete pgtype.Bool `json:"can_delete"`
-	IsMeta    pgtype.Bool `json:"is_meta"`
+	RoleID    pgtype.Text `json:"role_id"`
 	AppUserID int64       `json:"app_user_id"`
 }
 
 type UpdateUserRow struct {
 	AppUserID int64  `json:"app_user_id"`
 	Username  string `json:"username"`
-	CanCreate bool   `json:"can_create"`
-	CanUpdate bool   `json:"can_update"`
-	CanDelete bool   `json:"can_delete"`
-	IsMeta    bool   `json:"is_meta"`
+	RoleID    string `json:"role_id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateUserRow, error) {
-	row := q.db.QueryRow(ctx, updateUser,
-		arg.Username,
-		arg.CanCreate,
-		arg.CanUpdate,
-		arg.CanDelete,
-		arg.IsMeta,
-		arg.AppUserID,
-	)
+	row := q.db.QueryRow(ctx, updateUser, arg.Username, arg.RoleID, arg.AppUserID)
 	var i UpdateUserRow
-	err := row.Scan(
-		&i.AppUserID,
-		&i.Username,
-		&i.CanCreate,
-		&i.CanUpdate,
-		&i.CanDelete,
-		&i.IsMeta,
-	)
+	err := row.Scan(&i.AppUserID, &i.Username, &i.RoleID)
 	return i, err
 }

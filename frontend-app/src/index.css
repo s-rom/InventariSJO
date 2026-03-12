@@ -138,3 +138,42 @@ textarea { resize: vertical; min-height: 64px; }
 
 /* Misc */
 .empty { padding: 32px; text-align: center; color: var(--muted); }
+
+/* Reference page tabs */
+.ref-tabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  border-bottom: 1px solid var(--border); padding-bottom: 0;
+}
+.ref-tab {
+  padding: 8px 16px; border: 1px solid transparent; border-bottom: none;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: transparent; color: var(--muted);
+  font-size: 13px; font-weight: 500; cursor: pointer;
+  position: relative; bottom: -1px;
+  transition: background .12s, color .12s;
+}
+.ref-tab:hover { background: var(--bg); color: var(--text); }
+.ref-tab.active {
+  background: var(--surface); color: var(--accent);
+  border-color: var(--border); border-bottom-color: var(--surface);
+}
+
+/* Model hint (NewLaptop) */
+.model-hint {
+  margin-top: 14px;
+  padding: 10px 14px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius);
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  font-size: 12px; color: var(--text);
+}
+.model-hint-label { font-weight: 600; color: var(--accent); }
+.model-hint-note  { color: var(--muted); font-style: italic; }
+
+/* Form section title */
+.form-section-title {
+  font-size: 13px; font-weight: 600; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .4px;
+  border-bottom: 1px solid var(--border); padding-bottom: 6px;
+}

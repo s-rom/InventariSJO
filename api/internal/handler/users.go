@@ -5,17 +5,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/jackc/pgx/v5/pgtype"
 	dbsqlc "inventari/api/internal/db/sqlc"
+
 	"golang.org/x/crypto/bcrypt"
 )
-
-func toPgBool(v *bool) pgtype.Bool {
-	if v == nil {
-		return pgtype.Bool{}
-	}
-	return pgtype.Bool{Bool: *v, Valid: true}
-}
 
 type UsersHandler struct {
 	queries *dbsqlc.Queries
@@ -37,16 +30,17 @@ func (h *UsersHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Username  string `json:"username"`
-		Password  string `json:"password"`
-		CanCreate bool   `json:"can_create"`
-		CanUpdate bool   `json:"can_update"`
-		CanDelete bool   `json:"can_delete"`
-		IsMeta    bool   `json:"is_meta"`
+	if !requireRole(w, r, RoleAdmin) {
+		return
 	}
-	if err := decodeJSON(r, &req); err != nil || req.Username == "" || req.Password == "" {
-		respondError(w, http.StatusBadRequest, "username and password required")
+
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+		RoleID   string `json:"role_id"`
+	}
+	if err := decodeJSON(r, &req); err != nil || req.Username == "" || req.Password == "" || req.RoleID == "" {
+		respondError(w, http.StatusBadRequest, "username, password and role_id required")
 		return
 	}
 
@@ -60,10 +54,7 @@ func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
 	user, err := h.queries.CreateUser(r.Context(), dbsqlc.CreateUserParams{
 		Username:     req.Username,
 		PasswordHash: string(hash),
-		CanCreate:    req.CanCreate,
-		CanUpdate:    req.CanUpdate,
-		CanDelete:    req.CanDelete,
-		IsMeta:       req.IsMeta,
+		RoleID:       req.RoleID,
 	})
 	if err != nil {
 		h.logger.Error("create user", "error", err)
@@ -74,6 +65,10 @@ func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UsersHandler) Update(w http.ResponseWriter, r *http.Request) {
+	if !requireRole(w, r, RoleAdmin) {
+		return
+	}
+
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "invalid id")
@@ -81,11 +76,8 @@ func (h *UsersHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Username  *string `json:"username"`
-		CanCreate *bool   `json:"can_create"`
-		CanUpdate *bool   `json:"can_update"`
-		CanDelete *bool   `json:"can_delete"`
-		IsMeta    *bool   `json:"is_meta"`
+		Username *string `json:"username"`
+		RoleID   *string `json:"role_id"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
@@ -95,12 +87,13 @@ func (h *UsersHandler) Update(w http.ResponseWriter, r *http.Request) {
 	user, err := h.queries.UpdateUser(r.Context(), dbsqlc.UpdateUserParams{
 		AppUserID: id,
 		Username:  toPgText(req.Username),
-		CanCreate: toPgBool(req.CanCreate),
-		CanUpdate: toPgBool(req.CanUpdate),
-		CanDelete: toPgBool(req.CanDelete),
-		IsMeta:    toPgBool(req.IsMeta),
+		RoleID:    toPgText(req.RoleID),
 	})
 	if err != nil {
+		if isNotFound(err) {
+			respondError(w, http.StatusNotFound, "user not found")
+			return
+		}
 		h.logger.Error("update user", "error", err, "id", id)
 		respondError(w, http.StatusInternalServerError, "internal error")
 		return
@@ -109,6 +102,10 @@ func (h *UsersHandler) Update(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *UsersHandler) Delete(w http.ResponseWriter, r *http.Request) {
+	if !requireRole(w, r, RoleAdmin) {
+		return
+	}
+
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "invalid id")
@@ -119,5 +116,5 @@ func (h *UsersHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
-	respondJSON(w, http.StatusNoContent, nil)
+	w.WriteHeader(http.StatusNoContent)
 }

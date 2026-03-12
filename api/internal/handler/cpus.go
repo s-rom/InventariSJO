@@ -29,15 +29,15 @@ func (h *CPUsHandler) List(w http.ResponseWriter, r *http.Request) {
 
 func (h *CPUsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var req struct {
-		ModelName      *string `json:"model_name"`
-		BenchmarkScore *int32  `json:"benchmark_score"`
+		ModelName      string `json:"model_name"`
+		BenchmarkScore *int32 `json:"benchmark_score"`
 	}
-	if err := decodeJSON(r, &req); err != nil {
-		respondError(w, http.StatusBadRequest, "invalid request body")
+	if err := decodeJSON(r, &req); err != nil || req.ModelName == "" {
+		respondError(w, http.StatusBadRequest, "model_name required")
 		return
 	}
 	cpu, err := h.queries.CreateCPU(r.Context(), dbsqlc.CreateCPUParams{
-		ModelName:      toPgText(req.ModelName),
+		ModelName:      req.ModelName,
 		BenchmarkScore: toPgInt4(req.BenchmarkScore),
 	})
 	if err != nil {
@@ -86,5 +86,5 @@ func (h *CPUsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
-	respondJSON(w, http.StatusNoContent, nil)
+	w.WriteHeader(http.StatusNoContent)
 }

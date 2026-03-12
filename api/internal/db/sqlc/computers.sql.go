@@ -7,102 +7,36 @@ package dbsqlc
 
 import (
 	"context"
-	"encoding/json"
 
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const addComputerOS = `-- name: AddComputerOS :exec
-INSERT INTO computer_os (computer_id, os_id)
-VALUES ($1, $2)
-ON CONFLICT DO NOTHING
-`
-
-type AddComputerOSParams struct {
-	ComputerID int64 `json:"computer_id"`
-	OsID       int64 `json:"os_id"`
-}
-
-func (q *Queries) AddComputerOS(ctx context.Context, arg AddComputerOSParams) error {
-	_, err := q.db.Exec(ctx, addComputerOS, arg.ComputerID, arg.OsID)
-	return err
-}
-
 const createComputer = `-- name: CreateComputer :one
-INSERT INTO computer (
-    hostname,
-    cpu_id,
-    ram_gb,
-    ram_type,
-    storage_gb,
-    storage_type,
-    computer_type,
-    observations,
-    equipment_user_id,
-    room_id,
-    mac_address,
-    created_by_app_user_id
-) VALUES (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5,
-    $6,
-    $7,
-    $8,
-    $9,
-    $10,
-    $11,
-    $12
-)
-RETURNING computer_id, hostname, cpu_id, ram_gb, ram_type, storage_gb, storage_type, computer_type, observations, equipment_user_id, room_id, mac_address, created_by_app_user_id, created_at, updated_at
+INSERT INTO computer (hostname, room_id, observations, created_by_app_user_id)
+VALUES ($1, $2, $3, $4)
+RETURNING computer_id, hostname, room_id, observations, created_by_app_user_id, created_at, updated_at
 `
 
 type CreateComputerParams struct {
-	Hostname           string           `json:"hostname"`
-	CpuID              pgtype.Int8      `json:"cpu_id"`
-	RamGb              int32            `json:"ram_gb"`
-	RamType            RamTypeEnum      `json:"ram_type"`
-	StorageGb          int32            `json:"storage_gb"`
-	StorageType        StorageTypeEnum  `json:"storage_type"`
-	ComputerType       ComputerTypeEnum `json:"computer_type"`
-	Observations       pgtype.Text      `json:"observations"`
-	EquipmentUserID    pgtype.Int8      `json:"equipment_user_id"`
-	RoomID             pgtype.Int8      `json:"room_id"`
-	MacAddress         pgtype.Text      `json:"mac_address"`
-	CreatedByAppUserID int64            `json:"created_by_app_user_id"`
+	Hostname           string      `json:"hostname"`
+	RoomID             pgtype.Int8 `json:"room_id"`
+	Observations       pgtype.Text `json:"observations"`
+	CreatedByAppUserID int64       `json:"created_by_app_user_id"`
 }
 
 func (q *Queries) CreateComputer(ctx context.Context, arg CreateComputerParams) (Computer, error) {
 	row := q.db.QueryRow(ctx, createComputer,
 		arg.Hostname,
-		arg.CpuID,
-		arg.RamGb,
-		arg.RamType,
-		arg.StorageGb,
-		arg.StorageType,
-		arg.ComputerType,
-		arg.Observations,
-		arg.EquipmentUserID,
 		arg.RoomID,
-		arg.MacAddress,
+		arg.Observations,
 		arg.CreatedByAppUserID,
 	)
 	var i Computer
 	err := row.Scan(
 		&i.ComputerID,
 		&i.Hostname,
-		&i.CpuID,
-		&i.RamGb,
-		&i.RamType,
-		&i.StorageGb,
-		&i.StorageType,
-		&i.ComputerType,
-		&i.Observations,
-		&i.EquipmentUserID,
 		&i.RoomID,
-		&i.MacAddress,
+		&i.Observations,
 		&i.CreatedByAppUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -111,8 +45,7 @@ func (q *Queries) CreateComputer(ctx context.Context, arg CreateComputerParams) 
 }
 
 const deleteComputer = `-- name: DeleteComputer :exec
-DELETE FROM computer
-WHERE computer_id = $1
+DELETE FROM computer WHERE computer_id = $1
 `
 
 func (q *Queries) DeleteComputer(ctx context.Context, computerID int64) error {
@@ -120,28 +53,18 @@ func (q *Queries) DeleteComputer(ctx context.Context, computerID int64) error {
 	return err
 }
 
-const getComputer = `-- name: GetComputer :one
-SELECT computer_id, hostname, cpu_id, ram_gb, ram_type, storage_gb, storage_type, computer_type, observations, equipment_user_id, room_id, mac_address, created_by_app_user_id, created_at, updated_at
-FROM computer
-WHERE computer_id = $1
+const getComputerBase = `-- name: GetComputerBase :one
+SELECT computer_id, hostname, room_id, observations, created_by_app_user_id, created_at, updated_at FROM computer WHERE computer_id = $1
 `
 
-func (q *Queries) GetComputer(ctx context.Context, computerID int64) (Computer, error) {
-	row := q.db.QueryRow(ctx, getComputer, computerID)
+func (q *Queries) GetComputerBase(ctx context.Context, computerID int64) (Computer, error) {
+	row := q.db.QueryRow(ctx, getComputerBase, computerID)
 	var i Computer
 	err := row.Scan(
 		&i.ComputerID,
 		&i.Hostname,
-		&i.CpuID,
-		&i.RamGb,
-		&i.RamType,
-		&i.StorageGb,
-		&i.StorageType,
-		&i.ComputerType,
-		&i.Observations,
-		&i.EquipmentUserID,
 		&i.RoomID,
-		&i.MacAddress,
+		&i.Observations,
 		&i.CreatedByAppUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -149,135 +72,45 @@ func (q *Queries) GetComputer(ctx context.Context, computerID int64) (Computer, 
 	return i, err
 }
 
-const getComputerAudit = `-- name: GetComputerAudit :many
-SELECT audit_id, event_type, computer_id, old_values, new_values, changed_by_app_user_id, changed_at
-FROM computer_audit
-WHERE computer_id = $1
-ORDER BY changed_at DESC
-`
-
-func (q *Queries) GetComputerAudit(ctx context.Context, computerID int64) ([]ComputerAudit, error) {
-	rows, err := q.db.Query(ctx, getComputerAudit, computerID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []ComputerAudit
-	for rows.Next() {
-		var i ComputerAudit
-		if err := rows.Scan(
-			&i.AuditID,
-			&i.EventType,
-			&i.ComputerID,
-			&i.OldValues,
-			&i.NewValues,
-			&i.ChangedByAppUserID,
-			&i.ChangedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const insertComputerAudit = `-- name: InsertComputerAudit :exec
-INSERT INTO computer_audit (
-    event_type,
-    computer_id,
-    old_values,
-    new_values,
-    changed_by_app_user_id
-) VALUES (
-    $1,
-    $2,
-    $3,
-    $4,
-    $5
-)
-`
-
-type InsertComputerAuditParams struct {
-	EventType          AuditEventEnum  `json:"event_type"`
-	ComputerID         int64           `json:"computer_id"`
-	OldValues          json.RawMessage `json:"old_values"`
-	NewValues          []byte          `json:"new_values"`
-	ChangedByAppUserID int64           `json:"changed_by_app_user_id"`
-}
-
-func (q *Queries) InsertComputerAudit(ctx context.Context, arg InsertComputerAuditParams) error {
-	_, err := q.db.Exec(ctx, insertComputerAudit,
-		arg.EventType,
-		arg.ComputerID,
-		arg.OldValues,
-		arg.NewValues,
-		arg.ChangedByAppUserID,
-	)
-	return err
-}
-
-const listComputerOS = `-- name: ListComputerOS :many
-SELECT o.os_id, o.name
-FROM os o
-INNER JOIN computer_os co ON co.os_id = o.os_id
-WHERE co.computer_id = $1
-ORDER BY o.os_id
-`
-
-func (q *Queries) ListComputerOS(ctx context.Context, computerID int64) ([]O, error) {
-	rows, err := q.db.Query(ctx, listComputerOS, computerID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []O
-	for rows.Next() {
-		var i O
-		if err := rows.Scan(&i.OsID, &i.Name); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listComputers = `-- name: ListComputers :many
-SELECT computer_id, hostname, cpu_id, ram_gb, ram_type, storage_gb, storage_type, computer_type, observations, equipment_user_id, room_id, mac_address, created_by_app_user_id, created_at, updated_at
-FROM computer
-ORDER BY computer_id
+SELECT
+    c.computer_id, c.hostname, c.room_id, c.observations, c.created_by_app_user_id, c.created_at, c.updated_at,
+    CASE WHEN d.computer_id IS NOT NULL THEN 'desktop' ELSE 'laptop' END AS computer_type
+FROM computer c
+LEFT JOIN desktop d ON d.computer_id = c.computer_id
+ORDER BY c.computer_id
 `
 
-func (q *Queries) ListComputers(ctx context.Context) ([]Computer, error) {
+type ListComputersRow struct {
+	ComputerID         int64              `json:"computer_id"`
+	Hostname           string             `json:"hostname"`
+	RoomID             pgtype.Int8        `json:"room_id"`
+	Observations       pgtype.Text        `json:"observations"`
+	CreatedByAppUserID int64              `json:"created_by_app_user_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	ComputerType       string             `json:"computer_type"`
+}
+
+// Returns all computers with computer_type derived from which subtable has a row.
+func (q *Queries) ListComputers(ctx context.Context) ([]ListComputersRow, error) {
 	rows, err := q.db.Query(ctx, listComputers)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []Computer
+	var items []ListComputersRow
 	for rows.Next() {
-		var i Computer
+		var i ListComputersRow
 		if err := rows.Scan(
 			&i.ComputerID,
 			&i.Hostname,
-			&i.CpuID,
-			&i.RamGb,
-			&i.RamType,
-			&i.StorageGb,
-			&i.StorageType,
-			&i.ComputerType,
-			&i.Observations,
-			&i.EquipmentUserID,
 			&i.RoomID,
-			&i.MacAddress,
+			&i.Observations,
 			&i.CreatedByAppUserID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ComputerType,
 		); err != nil {
 			return nil, err
 		}
@@ -289,84 +122,37 @@ func (q *Queries) ListComputers(ctx context.Context) ([]Computer, error) {
 	return items, nil
 }
 
-const removeComputerOS = `-- name: RemoveComputerOS :exec
-DELETE FROM computer_os
-WHERE computer_id = $1 AND os_id = $2
-`
-
-type RemoveComputerOSParams struct {
-	ComputerID int64 `json:"computer_id"`
-	OsID       int64 `json:"os_id"`
-}
-
-func (q *Queries) RemoveComputerOS(ctx context.Context, arg RemoveComputerOSParams) error {
-	_, err := q.db.Exec(ctx, removeComputerOS, arg.ComputerID, arg.OsID)
-	return err
-}
-
-const updateComputer = `-- name: UpdateComputer :one
+const updateComputerBase = `-- name: UpdateComputerBase :one
 UPDATE computer
 SET
-    hostname         = COALESCE($1,         hostname),
-    cpu_id           = COALESCE($2,           cpu_id),
-    ram_gb           = COALESCE($3,           ram_gb),
-    ram_type         = COALESCE($4,         ram_type),
-    storage_gb       = COALESCE($5,       storage_gb),
-    storage_type     = COALESCE($6,     storage_type),
-    computer_type    = COALESCE($7,    computer_type),
-    observations     = COALESCE($8,     observations),
-    equipment_user_id = COALESCE($9, equipment_user_id),
-    room_id          = COALESCE($10,          room_id),
-    mac_address      = COALESCE($11,      mac_address),
-    updated_at       = now()
-WHERE computer_id = $12
-RETURNING computer_id, hostname, cpu_id, ram_gb, ram_type, storage_gb, storage_type, computer_type, observations, equipment_user_id, room_id, mac_address, created_by_app_user_id, created_at, updated_at
+    hostname     = COALESCE($1,     hostname),
+    room_id      = COALESCE($2,      room_id),
+    observations = COALESCE($3,  observations),
+    updated_at   = now()
+WHERE computer_id = $4
+RETURNING computer_id, hostname, room_id, observations, created_by_app_user_id, created_at, updated_at
 `
 
-type UpdateComputerParams struct {
-	Hostname        pgtype.Text          `json:"hostname"`
-	CpuID           pgtype.Int8          `json:"cpu_id"`
-	RamGb           pgtype.Int4          `json:"ram_gb"`
-	RamType         NullRamTypeEnum      `json:"ram_type"`
-	StorageGb       pgtype.Int4          `json:"storage_gb"`
-	StorageType     NullStorageTypeEnum  `json:"storage_type"`
-	ComputerType    NullComputerTypeEnum `json:"computer_type"`
-	Observations    pgtype.Text          `json:"observations"`
-	EquipmentUserID pgtype.Int8          `json:"equipment_user_id"`
-	RoomID          pgtype.Int8          `json:"room_id"`
-	MacAddress      pgtype.Text          `json:"mac_address"`
-	ComputerID      int64                `json:"computer_id"`
+type UpdateComputerBaseParams struct {
+	Hostname     pgtype.Text `json:"hostname"`
+	RoomID       pgtype.Int8 `json:"room_id"`
+	Observations pgtype.Text `json:"observations"`
+	ComputerID   int64       `json:"computer_id"`
 }
 
-func (q *Queries) UpdateComputer(ctx context.Context, arg UpdateComputerParams) (Computer, error) {
-	row := q.db.QueryRow(ctx, updateComputer,
+func (q *Queries) UpdateComputerBase(ctx context.Context, arg UpdateComputerBaseParams) (Computer, error) {
+	row := q.db.QueryRow(ctx, updateComputerBase,
 		arg.Hostname,
-		arg.CpuID,
-		arg.RamGb,
-		arg.RamType,
-		arg.StorageGb,
-		arg.StorageType,
-		arg.ComputerType,
-		arg.Observations,
-		arg.EquipmentUserID,
 		arg.RoomID,
-		arg.MacAddress,
+		arg.Observations,
 		arg.ComputerID,
 	)
 	var i Computer
 	err := row.Scan(
 		&i.ComputerID,
 		&i.Hostname,
-		&i.CpuID,
-		&i.RamGb,
-		&i.RamType,
-		&i.StorageGb,
-		&i.StorageType,
-		&i.ComputerType,
-		&i.Observations,
-		&i.EquipmentUserID,
 		&i.RoomID,
-		&i.MacAddress,
+		&i.Observations,
 		&i.CreatedByAppUserID,
 		&i.CreatedAt,
 		&i.UpdatedAt,

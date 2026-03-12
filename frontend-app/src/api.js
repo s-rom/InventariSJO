@@ -18,7 +18,7 @@ async function req(path, opts = {}) {
 }
 
 export const api = {
-  // Auth
+  // ── Auth ──────────────────────────────────────────────────
   login: async (username, password) => {
     const data = await req('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     setToken(data.token);
@@ -29,16 +29,54 @@ export const api = {
     clearToken();
   },
 
-  // Reference data
-  listCpus:           () => req('/cpus'),
-  listOS:             () => req('/os'),
-  listEquipmentUsers: () => req('/equipment-users'),
-  listCenters:        () => req('/centers'),
-  listRoomsByCenter:  (centerId) => req(`/centers/${centerId}/rooms`),
+  // ── CPUs ──────────────────────────────────────────────────
+  listCpus:   ()         => req('/cpus'),
+  createCpu:  (data)     => req('/cpus', { method: 'POST',  body: JSON.stringify(data) }),
+  updateCpu:  (id, data) => req(`/cpus/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteCpu:  (id)       => req(`/cpus/${id}`, { method: 'DELETE' }),
 
-  // Computers
-  listComputers:   ()         => req('/computers'),
-  createComputer:  (data)     => req('/computers', { method: 'POST',  body: JSON.stringify(data) }),
-  updateComputer:  (id, data) => req(`/computers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
-  deleteComputer:  (id)       => req(`/computers/${id}`, { method: 'DELETE' }),
+  // ── Operating Systems ─────────────────────────────────────
+  listOS:    ()     => req('/os'),
+  createOS:  (data) => req('/os', { method: 'POST',   body: JSON.stringify(data) }),
+  deleteOS:  (id)   => req(`/os/${id}`, { method: 'DELETE' }),
+
+  // ── Brands ────────────────────────────────────────────────
+  listBrands:   ()         => req('/brands'),
+  createBrand:  (data)     => req('/brands', { method: 'POST',  body: JSON.stringify(data) }),
+  updateBrand:  (id, data) => req(`/brands/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteBrand:  (id)       => req(`/brands/${id}`, { method: 'DELETE' }),
+
+  // ── Laptop Models ─────────────────────────────────────────
+  listLaptopModels:   ()         => req('/laptop-models'),
+  getLaptopModel:     (id)       => req(`/laptop-models/${id}`),
+  createLaptopModel:  (data)     => req('/laptop-models', { method: 'POST',  body: JSON.stringify(data) }),
+  updateLaptopModel:  (id, data) => req(`/laptop-models/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteLaptopModel:  (id)       => req(`/laptop-models/${id}`, { method: 'DELETE' }),
+
+  // ── Desktop Models ────────────────────────────────────────
+  listDesktopModels:   ()         => req('/desktop-models'),
+  getDesktopModel:     (id)       => req(`/desktop-models/${id}`),
+  createDesktopModel:  (data)     => req('/desktop-models', { method: 'POST',  body: JSON.stringify(data) }),
+  updateDesktopModel:  (id, data) => req(`/desktop-models/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteDesktopModel:  (id)       => req(`/desktop-models/${id}`, { method: 'DELETE' }),
+
+  // ── Equipment Users ───────────────────────────────────────
+  listEquipmentUsers: () => req('/equipment-users'),
+
+  // ── Centers & Rooms ───────────────────────────────────────
+  listCenters:       ()           => req('/centers'),
+  listRoomsByCenter: (centerId)   => req(`/centers/${centerId}/rooms`),
+
+  // ── Desktops ──────────────────────────────────────────────
+  listDesktops:   ()         => req('/desktops'),
+  getDesktop:     (id)       => req(`/desktops/${id}`),
+  createDesktop:  (data)     => req('/desktops', { method: 'POST',  body: JSON.stringify(data) }),
+  updateDesktop:  (id, data) => req(`/desktops/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // ── Laptops ───────────────────────────────────────────────
+  listLaptops:   ()         => req('/laptops'),
+  getLaptop:     (id)       => req(`/laptops/${id}`),
+  createLaptop:  (data)     => req('/laptops', { method: 'POST',  body: JSON.stringify(data) }),
+  updateLaptop:  (id, data) => req(`/laptops/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 };
+
