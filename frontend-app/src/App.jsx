@@ -6,6 +6,7 @@ import Layout   from './components/Layout';
 import Computers   from './pages/Computers';
 import NewDesktop  from './pages/NewDesktop';
 import NewLaptop   from './pages/NewLaptop';
+import Students    from './pages/Students';
 import Reference   from './pages/Reference';
 
 function RequireAuth({ children }) {
@@ -52,6 +53,7 @@ export default function App() {
                   <Route path="computers"            element={<Computers />} />
                   <Route path="computers/new-desktop" element={<NewDesktop />} />
                   <Route path="computers/new-laptop"  element={<NewLaptop />} />
+                  <Route path="students"             element={<Students />} />
                   <Route path="reference"            element={<Reference />} />
                   <Route path="*"                    element={<Navigate to="/computers" replace />} />
                 </Routes>

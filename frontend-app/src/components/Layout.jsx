@@ -4,6 +4,7 @@ const NAV = [
   { to: '/computers',             label: '🖥️  Equips' },
   { to: '/computers/new-desktop', label: '➕ Nou Sobretaula' },
   { to: '/computers/new-laptop',  label: '➕ Nou Portàtil' },
+  { to: '/students',              label: '👨‍🎓 Alumnes' },
   { to: '/reference',             label: '📋 Dades bàsiques' },
 ];
 

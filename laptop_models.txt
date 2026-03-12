@@ -1,0 +1,15 @@
+
+ACER	Lenovo100e 2Gen
+ACER	TravelIMateB514
+ACER	TravelMateIB N16Q9
+ACER	TravelMateIB N20H1
+ACER	Travelmate P214
+ACER	Travelmate P216
+ACER	TravelMateP238
+Dynabook	Satelite pro c50 E11F
+LENOVO	Lenonvo 100e
+LENOVO	Lenovo14w
+LENOVO	Lenovo14W
+LENOVO	LenovoV110151SK
+LENOVO	ThinkBook
+TravelMate p238-m-p675

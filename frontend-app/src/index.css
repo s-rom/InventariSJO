@@ -171,6 +171,23 @@ textarea { resize: vertical; min-height: 64px; }
 .model-hint-label { font-weight: 600; color: var(--accent); }
 .model-hint-note  { color: var(--muted); font-style: italic; }
 
+/* Filter bar (Students page) */
+.filter-bar {
+  display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.filter-item {
+  display: flex; flex-direction: column; gap: 4px;
+}
+.filter-item label {
+  font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .4px;
+}
+.filter-badge {
+  padding: 6px 12px; background: #eff6ff; border: 1px solid #bfdbfe;
+  border-radius: var(--radius); font-size: 12px; color: var(--accent);
+  align-self: flex-end; margin-bottom: 1px;
+}
+
 /* Form section title */
 .form-section-title {
   font-size: 13px; font-weight: 600; color: var(--muted);

@@ -61,11 +61,46 @@ export const api = {
   deleteDesktopModel:  (id)       => req(`/desktop-models/${id}`, { method: 'DELETE' }),
 
   // ── Equipment Users ───────────────────────────────────────
-  listEquipmentUsers: () => req('/equipment-users'),
+  listEquipmentUsers:   ()         => req('/equipment-users'),
+  createEquipmentUser:  (data)     => req('/equipment-users', { method: 'POST',  body: JSON.stringify(data) }),
+  updateEquipmentUser:  (id, data) => req(`/equipment-users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteEquipmentUser:  (id)       => req(`/equipment-users/${id}`, { method: 'DELETE' }),
 
-  // ── Centers & Rooms ───────────────────────────────────────
-  listCenters:       ()           => req('/centers'),
-  listRoomsByCenter: (centerId)   => req(`/centers/${centerId}/rooms`),
+  // ── Centers ───────────────────────────────────────────────
+  listCenters:   ()         => req('/centers'),
+  createCenter:  (data)     => req('/centers', { method: 'POST',  body: JSON.stringify(data) }),
+  updateCenter:  (id, data) => req(`/centers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteCenter:  (id)       => req(`/centers/${id}`, { method: 'DELETE' }),
+
+  // ── Rooms ─────────────────────────────────────────────────
+  listRoomsByCenter: (centerId)         => req(`/centers/${centerId}/rooms`),
+  createRoom:        (centerId, data)   => req(`/centers/${centerId}/rooms`, { method: 'POST',  body: JSON.stringify(data) }),
+  updateRoom:        (id, data)         => req(`/rooms/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteRoom:        (id)               => req(`/rooms/${id}`, { method: 'DELETE' }),
+
+  // ── Cycles ────────────────────────────────────────────────
+  listCycles:   ()         => req('/cycles'),
+  createCycle:  (data)     => req('/cycles', { method: 'POST',  body: JSON.stringify(data) }),
+  updateCycle:  (id, data) => req(`/cycles/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteCycle:  (id)       => req(`/cycles/${id}`, { method: 'DELETE' }),
+
+  // ── Classes ───────────────────────────────────────────────
+  listClassesByCycle: (cycleId)       => req(`/cycles/${cycleId}/classes`),
+  createClass:        (cycleId, data) => req(`/cycles/${cycleId}/classes`, { method: 'POST',  body: JSON.stringify(data) }),
+  updateClass:        (id, data)      => req(`/classes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteClass:        (id)            => req(`/classes/${id}`, { method: 'DELETE' }),
+
+  // ── Students ──────────────────────────────────────────────
+  listStudentsByClass: (classId)       => req(`/classes/${classId}/students`),
+  createStudent:       (classId, data) => req(`/classes/${classId}/students`, { method: 'POST',  body: JSON.stringify(data) }),
+  updateStudent:       (id, data)      => req(`/students/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteStudent:       (id)            => req(`/students/${id}`, { method: 'DELETE' }),
+
+  // ── Laptop Assignments ────────────────────────────────────
+  listAssignmentsByLaptop: (laptopId)       => req(`/laptops/${laptopId}/assignments`),
+  createAssignment:        (laptopId, data) => req(`/laptops/${laptopId}/assignments`, { method: 'POST',  body: JSON.stringify(data) }),
+  updateAssignment:        (id, data)       => req(`/assignments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteAssignment:        (id)             => req(`/assignments/${id}`, { method: 'DELETE' }),
 
   // ── Desktops ──────────────────────────────────────────────
   listDesktops:   ()         => req('/desktops'),

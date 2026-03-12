@@ -6,11 +6,16 @@ const RAM_TYPES     = ['DDR3', 'DDR4', 'DDR5', 'None'];
 const STORAGE_TYPES = ['HDD', 'SSD', 'NVMe', 'None'];
 
 const TABS = [
-  { id: 'cpus',     label: '💾 CPUs' },
-  { id: 'os',       label: '🖥 SO' },
-  { id: 'brands',   label: '🏷 Marques' },
-  { id: 'lmodels',  label: '💻 Models portàtil' },
-  { id: 'dmodels',  label: '🖥️ Models sobretaula' },
+  { id: 'cpus',       label: '💾 CPUs' },
+  { id: 'os',         label: '🖥 SO' },
+  { id: 'brands',     label: '🏷 Marques' },
+  { id: 'lmodels',    label: '💻 Models portàtil' },
+  { id: 'dmodels',    label: '🖥️ Models sobretaula' },
+  { id: 'equipusers', label: '👤 Usuaris equip' },
+  { id: 'centers',    label: '🏢 Centres' },
+  { id: 'rooms',      label: '🚪 Aules' },
+  { id: 'cycles',     label: '📚 Cicles' },
+  { id: 'classes',    label: '🎓 Cursos' },
 ];
 
 // ─────────────────────────────────────────────
@@ -512,6 +517,552 @@ function DesktopModelsTab() {
 }
 
 // ─────────────────────────────────────────────
+function EquipUsersTab() {
+  const [list, setList]       = useState([]);
+  const [name, setName]       = useState('');
+  const [editId, setEditId]   = useState(null);
+  const [editName, setEditName] = useState('');
+  const [saving, setSaving]   = useState(false);
+  const [err, setErr]         = useState('');
+  const cd                    = useConfirmDelete();
+
+  const load = useCallback(() => api.listEquipmentUsers().then(d => setList(d ?? [])).catch(() => {}), []);
+  useEffect(() => { load(); }, [load]);
+
+  async function create(e) {
+    e.preventDefault(); setErr(''); setSaving(true);
+    try { await api.createEquipmentUser({ name }); setName(''); load(); }
+    catch (ex) { setErr(ex.message); }
+    finally { setSaving(false); }
+  }
+
+  async function save(id) {
+    try { await api.updateEquipmentUser(id, { name: editName }); setEditId(null); load(); }
+    catch (ex) { setErr(ex.message); }
+  }
+
+  async function del(id) {
+    try { await api.deleteEquipmentUser(id); load(); } catch (ex) { setErr(ex.message); }
+    cd.cancelDelete();
+  }
+
+  return (
+    <Section title="Usuaris d'equip">
+      <div className="card" style={{ marginBottom: 14 }}>
+        <form onSubmit={create} className="form-panel">
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr auto' }}>
+            <div className="form-group">
+              <label>Nom *</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="ex: Sala servidors" required />
+            </div>
+            <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+              <label style={{ visibility: 'hidden' }}>_</label>
+              <button type="submit" className="btn btn-primary" disabled={saving || !name}>{saving ? '…' : 'Afegir'}</button>
+            </div>
+          </div>
+          {err && <div className="error-msg">{err}</div>}
+        </form>
+      </div>
+      <div className="card">
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Nom</th><th></th></tr></thead>
+            <tbody>
+              {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {list.map(u => (
+                <tr key={u.equipment_user_id}>
+                  <td>
+                    {editId === u.equipment_user_id
+                      ? <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ width: 220 }} autoFocus />
+                      : u.name}
+                  </td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {editId === u.equipment_user_id ? (
+                      <>
+                        <button className="btn btn-primary btn-sm" onClick={() => save(u.equipment_user_id)}>Guardar</button>
+                        <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancel·lar</button>
+                      </>
+                    ) : cd.isAsking(u.equipment_user_id) ? (
+                      <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
+                        <button className="btn btn-danger btn-sm" onClick={() => del(u.equipment_user_id)}>Sí</button>
+                        <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
+                    ) : (
+                      <>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(u.equipment_user_id); setEditName(u.name); }}>Editar</button>
+                        <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(u.equipment_user_id)}>Eliminar</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+// ─────────────────────────────────────────────
+function CentersTab() {
+  const [list, setList]         = useState([]);
+  const [name, setName]         = useState('');
+  const [editId, setEditId]     = useState(null);
+  const [editName, setEditName] = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState('');
+  const cd                      = useConfirmDelete();
+
+  const load = useCallback(() => api.listCenters().then(d => setList(d ?? [])).catch(() => {}), []);
+  useEffect(() => { load(); }, [load]);
+
+  async function create(e) {
+    e.preventDefault(); setErr(''); setSaving(true);
+    try { await api.createCenter({ name }); setName(''); load(); }
+    catch (ex) { setErr(ex.message); }
+    finally { setSaving(false); }
+  }
+
+  async function save(id) {
+    try { await api.updateCenter(id, { name: editName }); setEditId(null); load(); }
+    catch (ex) { setErr(ex.message); }
+  }
+
+  async function del(id) {
+    try { await api.deleteCenter(id); load(); } catch (ex) { setErr(ex.message); }
+    cd.cancelDelete();
+  }
+
+  return (
+    <Section title="Centres">
+      <div className="card" style={{ marginBottom: 14 }}>
+        <form onSubmit={create} className="form-panel">
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr auto' }}>
+            <div className="form-group">
+              <label>Nom del centre *</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="IES Exemple" required />
+            </div>
+            <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+              <label style={{ visibility: 'hidden' }}>_</label>
+              <button type="submit" className="btn btn-primary" disabled={saving || !name}>{saving ? '…' : 'Afegir'}</button>
+            </div>
+          </div>
+          {err && <div className="error-msg">{err}</div>}
+        </form>
+      </div>
+      <div className="card">
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Nom</th><th></th></tr></thead>
+            <tbody>
+              {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {list.map(c => (
+                <tr key={c.center_id}>
+                  <td>
+                    {editId === c.center_id
+                      ? <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ width: 260 }} autoFocus />
+                      : c.name}
+                  </td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {editId === c.center_id ? (
+                      <>
+                        <button className="btn btn-primary btn-sm" onClick={() => save(c.center_id)}>Guardar</button>
+                        <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancel·lar</button>
+                      </>
+                    ) : cd.isAsking(c.center_id) ? (
+                      <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
+                        <button className="btn btn-danger btn-sm" onClick={() => del(c.center_id)}>Sí</button>
+                        <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
+                    ) : (
+                      <>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(c.center_id); setEditName(c.name); }}>Editar</button>
+                        <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(c.center_id)}>Eliminar</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+// ─────────────────────────────────────────────
+function RoomsTab() {
+  const [centers, setCenters]         = useState([]);
+  const [centerId, setCenterId]       = useState(null);
+  const [rooms, setRooms]             = useState([]);
+  const [name, setName]               = useState('');
+  const [editId, setEditId]           = useState(null);
+  const [editName, setEditName]       = useState('');
+  const [saving, setSaving]           = useState(false);
+  const [err, setErr]                 = useState('');
+  const cd                            = useConfirmDelete();
+
+  useEffect(() => {
+    api.listCenters()
+      .then(d => { const list = d ?? []; setCenters(list); if (list.length > 0) setCenterId(list[0].center_id); })
+      .catch(() => {});
+  }, []);
+
+  const loadRooms = useCallback(() => {
+    if (!centerId) return;
+    api.listRoomsByCenter(centerId).then(d => setRooms(d ?? [])).catch(() => {});
+  }, [centerId]);
+
+  useEffect(() => { loadRooms(); }, [loadRooms]);
+
+  async function create(e) {
+    e.preventDefault(); if (!centerId) return; setErr(''); setSaving(true);
+    try { await api.createRoom(centerId, { name }); setName(''); loadRooms(); }
+    catch (ex) { setErr(ex.message); }
+    finally { setSaving(false); }
+  }
+
+  async function save(id) {
+    try { await api.updateRoom(id, { name: editName }); setEditId(null); loadRooms(); }
+    catch (ex) { setErr(ex.message); }
+  }
+
+  async function del(id) {
+    try { await api.deleteRoom(id); loadRooms(); } catch (ex) { setErr(ex.message); }
+    cd.cancelDelete();
+  }
+
+  return (
+    <Section title="Aules">
+      {/* Center selector */}
+      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', whiteSpace: 'nowrap' }}>Centre:</label>
+        <select
+          value={centerId ?? ''}
+          onChange={e => setCenterId(Number(e.target.value))}
+          style={{ width: 240 }}
+        >
+          {centers.length === 0 && <option value="">— Primer crea un centre —</option>}
+          {centers.map(c => <option key={c.center_id} value={c.center_id}>{c.name}</option>)}
+        </select>
+      </div>
+
+      {centerId && (
+        <>
+          <div className="card" style={{ marginBottom: 14 }}>
+            <form onSubmit={create} className="form-panel">
+              <div className="form-grid" style={{ gridTemplateColumns: '1fr auto' }}>
+                <div className="form-group">
+                  <label>Nom de l&apos;aula *</label>
+                  <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Aula 1, Lab informatica…" required />
+                </div>
+                <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+                  <label style={{ visibility: 'hidden' }}>_</label>
+                  <button type="submit" className="btn btn-primary" disabled={saving || !name}>{saving ? '…' : 'Afegir'}</button>
+                </div>
+              </div>
+              {err && <div className="error-msg">{err}</div>}
+            </form>
+          </div>
+          <div className="card">
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Aula</th><th></th></tr></thead>
+                <tbody>
+                  {rooms.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense aules per aquest centre.</td></tr>}
+                  {rooms.map(r => (
+                    <tr key={r.room_id}>
+                      <td>
+                        {editId === r.room_id
+                          ? <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ width: 220 }} autoFocus />
+                          : r.name}
+                      </td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {editId === r.room_id ? (
+                          <>
+                            <button className="btn btn-primary btn-sm" onClick={() => save(r.room_id)}>Guardar</button>
+                            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancel·lar</button>
+                          </>
+                        ) : cd.isAsking(r.room_id) ? (
+                          <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
+                            <button className="btn btn-danger btn-sm" onClick={() => del(r.room_id)}>Sí</button>
+                            <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
+                        ) : (
+                          <>
+                            <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(r.room_id); setEditName(r.name); }}>Editar</button>
+                            <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(r.room_id)}>Eliminar</button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
+
+// ─────────────────────────────────────────────
+function CyclesTab() {
+  const [list, setList]         = useState([]);
+  const [name, setName]         = useState('');
+  const [editId, setEditId]     = useState(null);
+  const [editName, setEditName] = useState('');
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState('');
+  const cd                      = useConfirmDelete();
+
+  const load = useCallback(() => api.listCycles().then(d => setList(d ?? [])).catch(() => {}), []);
+  useEffect(() => { load(); }, [load]);
+
+  async function create(e) {
+    e.preventDefault(); setErr(''); setSaving(true);
+    try { await api.createCycle({ name }); setName(''); load(); }
+    catch (ex) { setErr(ex.message); }
+    finally { setSaving(false); }
+  }
+
+  async function save(id) {
+    try { await api.updateCycle(id, { name: editName }); setEditId(null); load(); }
+    catch (ex) { setErr(ex.message); }
+  }
+
+  async function del(id) {
+    try { await api.deleteCycle(id); load(); } catch (ex) { setErr(ex.message); }
+    cd.cancelDelete();
+  }
+
+  return (
+    <Section title="Cicles formatius">
+      <div className="card" style={{ marginBottom: 14 }}>
+        <form onSubmit={create} className="form-panel">
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr auto' }}>
+            <div className="form-group">
+              <label>Nom del cicle *</label>
+              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="SMX, ASIX, DAW…" required />
+            </div>
+            <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+              <label style={{ visibility: 'hidden' }}>_</label>
+              <button type="submit" className="btn btn-primary" disabled={saving || !name}>{saving ? '…' : 'Afegir'}</button>
+            </div>
+          </div>
+          {err && <div className="error-msg">{err}</div>}
+        </form>
+      </div>
+      <div className="card">
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Nom</th><th></th></tr></thead>
+            <tbody>
+              {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {list.map(c => (
+                <tr key={c.cycle_id}>
+                  <td>
+                    {editId === c.cycle_id
+                      ? <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ width: 200 }} autoFocus />
+                      : c.name}
+                  </td>
+                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    {editId === c.cycle_id ? (
+                      <>
+                        <button className="btn btn-primary btn-sm" onClick={() => save(c.cycle_id)}>Guardar</button>
+                        <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancel·lar</button>
+                      </>
+                    ) : cd.isAsking(c.cycle_id) ? (
+                      <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
+                        <button className="btn btn-danger btn-sm" onClick={() => del(c.cycle_id)}>Sí</button>
+                        <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
+                    ) : (
+                      <>
+                        <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(c.cycle_id); setEditName(c.name); }}>Editar</button>
+                        <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(c.cycle_id)}>Eliminar</button>
+                      </>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </Section>
+  );
+}
+
+// ─────────────────────────────────────────────
+const SHIFTS = [
+  { value: 'morning',   label: 'Matí' },
+  { value: 'afternoon', label: 'Tarda' },
+];
+
+function ClassesTab() {
+  const [cycles, setCycles]     = useState([]);
+  const [cycleId, setCycleId]   = useState(null);
+  const [classes, setClasses]   = useState([]);
+  const [saving, setSaving]     = useState(false);
+  const [err, setErr]           = useState('');
+  const cd                      = useConfirmDelete();
+
+  const EMPTY_CL = { course: '', class_label: '', shift: 'morning' };
+  const [form, setForm]         = useState(EMPTY_CL);
+  const [editId, setEditId]     = useState(null);
+  const [editForm, setEditForm] = useState({});
+
+  function setF(k, v)  { setForm(f => ({ ...f, [k]: v })); }
+  function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
+
+  useEffect(() => {
+    api.listCycles()
+      .then(d => { const list = d ?? []; setCycles(list); if (list.length > 0) setCycleId(list[0].cycle_id); })
+      .catch(() => {});
+  }, []);
+
+  const loadClasses = useCallback(() => {
+    if (!cycleId) return;
+    api.listClassesByCycle(cycleId).then(d => setClasses(d ?? [])).catch(() => {});
+  }, [cycleId]);
+
+  useEffect(() => { loadClasses(); }, [loadClasses]);
+
+  async function create(e) {
+    e.preventDefault(); if (!cycleId) return; setErr(''); setSaving(true);
+    try {
+      await api.createClass(cycleId, {
+        course:      parseInt(form.course, 10),
+        class_label: form.class_label,
+        shift:       form.shift,
+      });
+      setForm(EMPTY_CL); loadClasses();
+    } catch (ex) { setErr(ex.message); }
+    finally { setSaving(false); }
+  }
+
+  async function save(id) {
+    try {
+      await api.updateClass(id, {
+        class_label: editForm.class_label,
+        shift:       editForm.shift,
+      });
+      setEditId(null); loadClasses();
+    } catch (ex) { setErr(ex.message); }
+  }
+
+  async function del(id) {
+    try { await api.deleteClass(id); loadClasses(); } catch (ex) { setErr(ex.message); }
+    cd.cancelDelete();
+  }
+
+  return (
+    <Section title="Cursos / Classes">
+      {/* Cycle selector */}
+      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted)', whiteSpace: 'nowrap' }}>Cicle:</label>
+        <select
+          value={cycleId ?? ''}
+          onChange={e => setCycleId(Number(e.target.value))}
+          style={{ width: 240 }}
+        >
+          {cycles.length === 0 && <option value="">— Primer crea un cicle —</option>}
+          {cycles.map(c => <option key={c.cycle_id} value={c.cycle_id}>{c.name}</option>)}
+        </select>
+      </div>
+
+      {cycleId && (
+        <>
+          <div className="card" style={{ marginBottom: 14 }}>
+            <form onSubmit={create} className="form-panel">
+              <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr) auto' }}>
+                <div className="form-group">
+                  <label>Curs *</label>
+                  <input
+                    type="number" min="1" max="4"
+                    value={form.course}
+                    onChange={e => setF('course', e.target.value)}
+                    placeholder="1, 2…"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Etiqueta *</label>
+                  <input
+                    type="text"
+                    value={form.class_label}
+                    onChange={e => setF('class_label', e.target.value)}
+                    placeholder="A, B, Matí…"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Torn *</label>
+                  <select value={form.shift} onChange={e => setF('shift', e.target.value)}>
+                    {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                  </select>
+                </div>
+                <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+                  <label style={{ visibility: 'hidden' }}>_</label>
+                  <button type="submit" className="btn btn-primary" disabled={saving || !form.course || !form.class_label}>
+                    {saving ? '…' : 'Afegir'}
+                  </button>
+                </div>
+              </div>
+              {err && <div className="error-msg">{err}</div>}
+            </form>
+          </div>
+          <div className="card">
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Curs</th><th>Etiqueta</th><th>Torn</th><th></th></tr></thead>
+                <tbody>
+                  {classes.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense cursos per aquest cicle.</td></tr>}
+                  {classes.map(cl => (
+                    <tr key={cl.school_class_id}>
+                      <td>{cl.course}r</td>
+                      <td>
+                        {editId === cl.school_class_id
+                          ? <input type="text" value={editForm.class_label} onChange={e => setEF('class_label', e.target.value)} style={{ width: 100 }} autoFocus />
+                          : cl.class_label}
+                      </td>
+                      <td>
+                        {editId === cl.school_class_id
+                          ? <select value={editForm.shift} onChange={e => setEF('shift', e.target.value)} style={{ width: 90 }}>
+                              {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
+                          : SHIFTS.find(s => s.value === cl.shift)?.label ?? cl.shift}
+                      </td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {editId === cl.school_class_id ? (
+                          <>
+                            <button className="btn btn-primary btn-sm" onClick={() => save(cl.school_class_id)}>Guardar</button>
+                            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancel·lar</button>
+                          </>
+                        ) : cd.isAsking(cl.school_class_id) ? (
+                          <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
+                            <button className="btn btn-danger btn-sm" onClick={() => del(cl.school_class_id)}>Sí</button>
+                            <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
+                        ) : (
+                          <>
+                            <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(cl.school_class_id); setEditForm({ class_label: cl.class_label, shift: cl.shift }); }}>Editar</button>
+                            <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(cl.school_class_id)}>Eliminar</button>
+                          </>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </Section>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Main Reference page
 export default function Reference() {
   const [tab, setTab] = useState('cpus');
@@ -536,11 +1087,16 @@ export default function Reference() {
       </div>
 
       <div style={{ marginTop: 20 }}>
-        {tab === 'cpus'    && <CpusTab />}
-        {tab === 'os'      && <OsTab />}
-        {tab === 'brands'  && <BrandsTab />}
-        {tab === 'lmodels' && <LaptopModelsTab />}
-        {tab === 'dmodels' && <DesktopModelsTab />}
+        {tab === 'cpus'       && <CpusTab />}
+        {tab === 'os'         && <OsTab />}
+        {tab === 'brands'     && <BrandsTab />}
+        {tab === 'lmodels'    && <LaptopModelsTab />}
+        {tab === 'dmodels'    && <DesktopModelsTab />}
+        {tab === 'equipusers' && <EquipUsersTab />}
+        {tab === 'centers'    && <CentersTab />}
+        {tab === 'rooms'      && <RoomsTab />}
+        {tab === 'cycles'     && <CyclesTab />}
+        {tab === 'classes'    && <ClassesTab />}
       </div>
     </>
   );
