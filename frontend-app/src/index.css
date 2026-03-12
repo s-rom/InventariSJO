@@ -1,0 +1,140 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #f5f6fa;
+  --surface:  #ffffff;
+  --border:   #e0e3ea;
+  --text:     #1a1d23;
+  --muted:    #6b7280;
+  --accent:   #3b82f6;
+  --accent-h: #2563eb;
+  --danger:   #ef4444;
+  --danger-h: #dc2626;
+  --radius:   6px;
+  --shadow:   0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Layout */
+.layout    { display: flex; height: 100vh; overflow: hidden; }
+.sidebar   { width: 200px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
+.main      { flex: 1; overflow-y: auto; padding: 24px; }
+
+.sidebar-brand {
+  padding: 18px 16px 14px;
+  font-weight: 700;
+  font-size: 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--accent);
+  letter-spacing: -0.3px;
+}
+
+.nav-item {
+  padding: 10px 16px;
+  cursor: pointer;
+  color: var(--muted);
+  border-left: 3px solid transparent;
+  transition: background .1s, color .1s;
+}
+.nav-item:hover { background: var(--bg); color: var(--text); }
+.nav-item.active { border-left-color: var(--accent); color: var(--accent); background: #eff6ff; font-weight: 500; }
+
+.sidebar-bottom { margin-top: auto; padding: 12px; border-top: 1px solid var(--border); }
+
+/* Page header */
+.page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.page-title  { font-size: 20px; font-weight: 600; }
+
+/* Card */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); }
+
+/* Table */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+thead th { text-align: left; padding: 10px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); border-bottom: 1px solid var(--border); background: #f9fafb; }
+tbody td { padding: 10px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover { background: #f9fafb; }
+
+/* Badge */
+.badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 500; background: #eff6ff; color: var(--accent); margin: 1px; }
+.badge.gray { background: #f3f4f6; color: var(--muted); }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 14px; border-radius: var(--radius); border: 1px solid transparent;
+  font-size: 13px; font-weight: 500; cursor: pointer; transition: background .15s;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: var(--accent-h); }
+.btn-ghost   { background: transparent; border-color: var(--border); color: var(--text); }
+.btn-ghost:hover { background: var(--bg); }
+.btn-danger  { background: transparent; border-color: transparent; color: var(--danger); padding: 4px 8px; }
+.btn-danger:hover { background: #fef2f2; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* Form */
+.form-panel { padding: 20px; border-top: 1px solid var(--border); }
+.form-title { font-size: 15px; font-weight: 600; margin-bottom: 16px; }
+.form-grid  { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group.wide { grid-column: 1 / -1; }
+.form-group.span2 { grid-column: span 2; }
+label { font-size: 12px; font-weight: 500; color: var(--muted); }
+
+input[type="text"],
+input[type="number"],
+input[type="password"],
+textarea,
+select {
+  width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+  border-radius: var(--radius); background: var(--surface); color: var(--text);
+  font-size: 13px; font-family: inherit; transition: border-color .15s;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+}
+textarea { resize: vertical; min-height: 64px; }
+
+.form-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+/* Combobox */
+.combobox { position: relative; }
+.combobox-dropdown {
+  position: absolute; top: calc(100% + 2px); left: 0; right: 0; z-index: 100;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(0,0,0,.1); max-height: 220px; overflow-y: auto;
+}
+.combobox-option {
+  padding: 8px 10px; cursor: pointer; font-size: 13px;
+}
+.combobox-option:hover, .combobox-option.highlighted { background: #eff6ff; }
+.combobox-option.selected { color: var(--accent); font-weight: 500; }
+.combobox-empty { padding: 8px 10px; color: var(--muted); font-size: 13px; }
+
+/* OS checkboxes */
+.os-grid { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.os-check { display: flex; align-items: center; gap: 5px; padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; font-size: 12px; user-select: none; }
+.os-check:hover { border-color: var(--accent); color: var(--accent); }
+.os-check.selected { border-color: var(--accent); background: #eff6ff; color: var(--accent); }
+.os-check input { width: auto; }
+
+/* Login */
+.login-wrap { display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg); }
+.login-card  { width: 320px; padding: 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); }
+.login-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+.login-sub   { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+.login-card .form-group { margin-bottom: 14px; }
+.login-card .btn { width: 100%; justify-content: center; margin-top: 6px; padding: 9px; }
+.error-msg { color: var(--danger); font-size: 12px; margin-top: 8px; }
+
+/* Misc */
+.empty { padding: 32px; text-align: center; color: var(--muted); }
