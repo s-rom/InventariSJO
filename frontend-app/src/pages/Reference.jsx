@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
+import { useAuth } from '../App';
 import Combobox from '../components/Combobox';
 
 const RAM_TYPES     = ['DDR3', 'DDR4', 'DDR5', 'None'];
@@ -900,6 +901,9 @@ const SHIFTS = [
 ];
 
 function ClassesTab() {
+  const { role } = useAuth();
+  const isTutor  = role === 'tutor';
+
   const [cycles, setCycles]     = useState([]);
   const [cycleId, setCycleId]   = useState(null);
   const [classes, setClasses]   = useState([]);
@@ -916,21 +920,31 @@ function ClassesTab() {
   function setF(k, v)  { setForm(f => ({ ...f, [k]: v })); }
   function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
 
+  // Tutors: load only their assigned classes (flat, no cycle selector needed)
+  // Admins/editors: load cycles + all classes per cycle
   useEffect(() => {
-    api.listCycles()
-      .then(d => { const list = d ?? []; setCycles(list); if (list.length > 0) setCycleId(list[0].cycle_id); })
-      .catch(() => {});
-    api.listUsers()
-      .then(d => setTutors((d ?? []).filter(u => u.role_id === 'tutor')))
-      .catch(() => {});
-  }, []);
+    if (isTutor) {
+      api.listMyClasses().then(d => setClasses(d ?? [])).catch(() => {});
+    } else {
+      api.listCycles()
+        .then(d => { const list = d ?? []; setCycles(list); if (list.length > 0) setCycleId(list[0].cycle_id); })
+        .catch(() => {});
+      api.listUsers()
+        .then(d => setTutors((d ?? []).filter(u => u.role_id === 'tutor')))
+        .catch(() => {});
+    }
+  }, [isTutor]);
 
   const loadClasses = useCallback(() => {
-    if (!cycleId) return;
-    api.listClassesByCycle(cycleId).then(d => setClasses(d ?? [])).catch(() => {});
-  }, [cycleId]);
+    if (isTutor) {
+      api.listMyClasses().then(d => setClasses(d ?? [])).catch(() => {});
+    } else {
+      if (!cycleId) return;
+      api.listClassesByCycle(cycleId).then(d => setClasses(d ?? [])).catch(() => {});
+    }
+  }, [isTutor, cycleId]);
 
-  useEffect(() => { loadClasses(); }, [loadClasses]);
+  useEffect(() => { if (!isTutor) loadClasses(); }, [loadClasses, isTutor]);
 
   async function create(e) {
     e.preventDefault(); if (!cycleId) return; setErr(''); setSaving(true);
@@ -950,7 +964,7 @@ function ClassesTab() {
   async function save(id) {
     try {
       const patch = { class_label: editForm.class_label, shift: editForm.shift };
-      if (editForm.tutor_app_user_id !== '') patch.tutor_app_user_id = parseInt(editForm.tutor_app_user_id, 10);
+      if (!isTutor && editForm.tutor_app_user_id !== '') patch.tutor_app_user_id = parseInt(editForm.tutor_app_user_id, 10);
       await api.updateClass(id, patch);
       setEditId(null); loadClasses();
     } catch (ex) { setErr(ex.message); }
@@ -961,6 +975,56 @@ function ClassesTab() {
     cd.cancelDelete();
   }
 
+  // ── Tutor view: flat list of assigned classes, only edit shift ──────────────
+  if (isTutor) {
+    return (
+      <Section title="Els meus cursos">
+        {classes.length === 0 && (
+          <div className="card" style={{ padding: 20, color: 'var(--muted)', textAlign: 'center' }}>
+            Encara no tens cap curs assignat. Contacta amb un administrador.
+          </div>
+        )}
+        {classes.length > 0 && (
+          <div className="card">
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Cicle</th><th>Curs</th><th>Etiqueta</th><th>Torn</th><th></th></tr></thead>
+                <tbody>
+                  {classes.map(cl => (
+                    <tr key={cl.class_id}>
+                      <td>{cl.cycle_name}</td>
+                      <td>{cl.course}r</td>
+                      <td>{cl.class_label}</td>
+                      <td>
+                        {editId === cl.class_id
+                          ? <select value={editForm.shift} onChange={e => setEF('shift', e.target.value)} style={{ width: 90 }}>
+                              {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                            </select>
+                          : SHIFTS.find(s => s.value === cl.shift)?.label ?? cl.shift}
+                      </td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {editId === cl.class_id ? (
+                          <>
+                            <button className="btn btn-primary btn-sm" onClick={() => save(cl.class_id)}>Guardar</button>
+                            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancel·lar</button>
+                          </>
+                        ) : (
+                          <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(cl.class_id); setEditForm({ shift: cl.shift }); }}>Editar</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        {err && <div className="error-msg" style={{ marginTop: 8 }}>{err}</div>}
+      </Section>
+    );
+  }
+
+  // ── Admin / Editor view ───────────────────────────────────────────────────
   return (
     <Section title="Cursos / Classes">
       {/* Cycle selector */}

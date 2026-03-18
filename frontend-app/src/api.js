@@ -93,6 +93,7 @@ export const api = {
 
   // ── Classes ───────────────────────────────────────────────
   listClassesByCycle: (cycleId)       => req(`/cycles/${cycleId}/classes`),
+  listMyClasses:      ()              => req('/tutor/classes'),
   createClass:        (cycleId, data) => req(`/cycles/${cycleId}/classes`, { method: 'POST',  body: JSON.stringify(data) }),
   updateClass:        (id, data)      => req(`/classes/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteClass:        (id)            => req(`/classes/${id}`, { method: 'DELETE' }),
