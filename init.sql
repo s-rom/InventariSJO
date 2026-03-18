@@ -368,49 +368,45 @@ CREATE INDEX ON audit_log (event_type);
 -- ============================================================
 -- DADES INICIALS
 -- ============================================================
-INSERT INTO role (role_id, description) VALUES
-('readonly', 'Només lectura de totes les dades'),
-('editor',   'Pot crear i modificar equips, models, sales i usuaris d''equip'),
-('admin',    'Accés total i gestió d''usuaris de l''aplicació'),
-('tutor',    'Pot modificar alumnes i assignacions de portàtils de les seves classes');
+-- INSERT INTO role (role_id, description) VALUES
+-- ('readonly', 'Només lectura de totes les dades'),
+-- ('editor',   'Pot crear i modificar equips, models, sales i usuaris d''equip'),
+-- ('admin',    'Accés total i gestió d''usuaris de l''aplicació'),
+-- ('tutor',    'Pot modificar alumnes i assignacions de portàtils de les seves classes');
 
-INSERT INTO app_user (username, password_hash, role_id)
-VALUES ('sergi', '$2a$10$43Hib5uNSgnM9NCwZ0VulOr8JU0TGl1hPn1G.cGD5Q/kvvPHHYxNC', 'admin');
+-- INSERT INTO cpu (model_name, benchmark_score) VALUES
+-- ('Intel Core i3-4130 3.40GHz',  3311),
+-- ('Intel Core i3-6100 3.70GHz',  4151),
+-- ('Intel Core i3-2100 3.10GHz',  1845),
+-- ('Intel Celeron G550 2.60GHz',  1214),
+-- ('Intel Core i5-750 2.67GHz',   2512),
+-- ('Intel Core i3-3240 3.40GHz',  2304),
+-- ('Intel Celeron G1610 2.60GHz', 1508),
+-- ('Intel Core i5-4440',          4742),
+-- ('Intel Pentium G3260 3.30GHz', 2068),
+-- ('Intel Core i3-2105 3.10GHz',  1883),
+-- ('Intel Core i5-4590 3.30GHz',  5354),
+-- ('Intel Core i5-6500 3.20GHz',  5644),
+-- ('Intel Core i5-2400 3.10GHz',  3855),
+-- ('Intel Core i3-7100 3.90GHz',  4336),
+-- ('AMD Ryzen 5 Pro 5650U',      14719);
 
-INSERT INTO cpu (model_name, benchmark_score) VALUES
-('Intel Core i3-4130 3.40GHz',  3311),
-('Intel Core i3-6100 3.70GHz',  4151),
-('Intel Core i3-2100 3.10GHz',  1845),
-('Intel Celeron G550 2.60GHz',  1214),
-('Intel Core i5-750 2.67GHz',   2512),
-('Intel Core i3-3240 3.40GHz',  2304),
-('Intel Celeron G1610 2.60GHz', 1508),
-('Intel Core i5-4440',          4742),
-('Intel Pentium G3260 3.30GHz', 2068),
-('Intel Core i3-2105 3.10GHz',  1883),
-('Intel Core i5-4590 3.30GHz',  5354),
-('Intel Core i5-6500 3.20GHz',  5644),
-('Intel Core i5-2400 3.10GHz',  3855),
-('Intel Core i3-7100 3.90GHz',  4336),
-('AMD Ryzen 5 Pro 5650U',      14719);
+-- INSERT INTO os (name) VALUES
+-- ('Windows 10'),
+-- ('Windows 11'),
+-- ('ChromeOs Flex'),
+-- ('ChromeOS');
 
-INSERT INTO os (name) VALUES
-('Windows 10'),
-('Windows 11'),
-('ChromeOs Flex'),
-('ChromeOS');
+-- INSERT INTO cycle (name) VALUES
+-- ('SMX'),
+-- ('ASIX'),
+-- ('GEAD'),
+-- ('FPB-Informatica'),
+-- ('DAW'),
+-- ('DAM'),
+-- ('FPB-Administracio');
 
-INSERT INTO cycle (name) VALUES
-('SMX'),
-('ASIX'),
-('GEAD'),
-('FPB-Informatica'),
-('DAW'),
-('DAM'),
-('FPB-Administracio');
-
--- Usuari administrador per defecte
-INSERT INTO role (role_id, description) VALUES ('admin', 'Administrador') ON CONFLICT DO NOTHING;
-INSERT INTO app_user (username, password_hash, role_id)
-VALUES ('admin', crypt('admin', gen_salt('bf')), 'admin')
-ON CONFLICT (username) DO NOTHING;
+-- -- Usuari administrador per defecte
+-- INSERT INTO app_user (username, password_hash, role_id)
+-- VALUES ('admin', crypt('admin', gen_salt('bf')), 'admin')
+-- ON CONFLICT (username) DO NOTHING;
