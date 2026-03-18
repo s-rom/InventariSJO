@@ -8,6 +8,7 @@ const STORAGE_TYPES = ['HDD', 'SSD', 'NVMe', 'None'];
 
 const EMPTY = {
   hostname:          '',
+  serial_number:     '',
   room_id:           null,
   laptop_model_id:   null,
   os_id:             null,
@@ -87,6 +88,7 @@ export default function NewLaptop() {
     try {
       const body = {
         hostname:          form.hostname,
+        serial_number:     form.serial_number     || null,
         room_id:           form.room_id,
         laptop_model_id:   form.laptop_model_id,
         os_id:             form.os_id             || null,
@@ -141,6 +143,17 @@ export default function NewLaptop() {
                 value={form.room_id}
                 onChange={v => set('room_id', v)}
                 placeholder="Selecciona aula…"
+              />
+            </div>
+
+            {/* Serial number */}
+            <div className="form-group">
+              <label>Número de sèrie</label>
+              <input
+                type="text"
+                value={form.serial_number}
+                onChange={e => set('serial_number', e.target.value)}
+                placeholder="ex: SN123456789"
               />
             </div>
 
