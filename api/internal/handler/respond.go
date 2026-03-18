@@ -103,7 +103,7 @@ type auditEntry struct {
 	NewValues json.RawMessage // nil for 'deleted'
 }
 
-func writeAudit(ctx context.Context, q *dbsqlc.Queries, user dbsqlc.AppUser, e auditEntry) error {
+func writeAudit(ctx context.Context, q Querier, user dbsqlc.AppUser, e auditEntry) error {
 	return q.InsertAuditLog(ctx, dbsqlc.InsertAuditLogParams{
 		TableName:          e.TableName,
 		RecordID:           e.RecordID,

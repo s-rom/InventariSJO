@@ -9,11 +9,11 @@ import (
 )
 
 type OSHandler struct {
-	queries *dbsqlc.Queries
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewOSHandler(queries *dbsqlc.Queries, logger *slog.Logger) *OSHandler {
+func NewOSHandler(queries Querier, logger *slog.Logger) *OSHandler {
 	return &OSHandler{queries: queries, logger: logger}
 }
 

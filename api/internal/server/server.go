@@ -21,7 +21,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	// ─── Handlers ────────────────────────────────────────────────────────────
 	authH := handler.NewAuthHandler(queries, sessions, logger)
 	usersH := handler.NewUsersHandler(queries, logger)
-	rolesH := handler.NewRolesHandler(queries, pool, logger)
+	rolesH := handler.NewRolesHandler(queries, logger)
 	centersH := handler.NewCentersHandler(queries, logger)
 	roomsH := handler.NewRoomsHandler(queries, logger)
 	cpusH := handler.NewCPUsHandler(queries, logger)
@@ -33,11 +33,11 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	computersH := handler.NewComputersHandler(queries, pool, logger)
 	desktopsH := handler.NewDesktopsHandler(queries, pool, logger)
 	laptopsH := handler.NewLaptopsHandler(queries, pool, logger)
-	cyclesH := handler.NewCyclesHandler(queries, pool, logger)
-	classesH := handler.NewClassesHandler(queries, pool, logger)
-	studentsH := handler.NewStudentsHandler(queries, pool, logger)
-	assignmentsH := handler.NewAssignmentsHandler(queries, pool, logger)
-	auditH := handler.NewAuditHandler(queries, pool, logger)
+	cyclesH := handler.NewCyclesHandler(queries, logger)
+	classesH := handler.NewClassesHandler(queries, logger)
+	studentsH := handler.NewStudentsHandler(queries, logger)
+	assignmentsH := handler.NewAssignmentsHandler(queries, logger)
+	auditH := handler.NewAuditHandler(queries, logger)
 
 	// ─── Auth (public) ────────────────────────────────────────────────────────
 	mux.HandleFunc("POST /auth/login", authH.Login)

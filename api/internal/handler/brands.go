@@ -9,11 +9,11 @@ import (
 )
 
 type BrandsHandler struct {
-	queries *dbsqlc.Queries
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewBrandsHandler(queries *dbsqlc.Queries, logger *slog.Logger) *BrandsHandler {
+func NewBrandsHandler(queries Querier, logger *slog.Logger) *BrandsHandler {
 	return &BrandsHandler{queries: queries, logger: logger}
 }
 

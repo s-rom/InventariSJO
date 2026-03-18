@@ -9,11 +9,11 @@ import (
 )
 
 type CPUsHandler struct {
-	queries *dbsqlc.Queries
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewCPUsHandler(queries *dbsqlc.Queries, logger *slog.Logger) *CPUsHandler {
+func NewCPUsHandler(queries Querier, logger *slog.Logger) *CPUsHandler {
 	return &CPUsHandler{queries: queries, logger: logger}
 }
 

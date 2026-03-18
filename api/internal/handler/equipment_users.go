@@ -9,11 +9,11 @@ import (
 )
 
 type EquipmentUsersHandler struct {
-	queries *dbsqlc.Queries
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewEquipmentUsersHandler(queries *dbsqlc.Queries, logger *slog.Logger) *EquipmentUsersHandler {
+func NewEquipmentUsersHandler(queries Querier, logger *slog.Logger) *EquipmentUsersHandler {
 	return &EquipmentUsersHandler{queries: queries, logger: logger}
 }
 

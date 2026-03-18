@@ -11,11 +11,11 @@ import (
 // ── Laptop Models ─────────────────────────────────────────────────────────────
 
 type LaptopModelsHandler struct {
-	queries *dbsqlc.Queries
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewLaptopModelsHandler(queries *dbsqlc.Queries, logger *slog.Logger) *LaptopModelsHandler {
+func NewLaptopModelsHandler(queries Querier, logger *slog.Logger) *LaptopModelsHandler {
 	return &LaptopModelsHandler{queries: queries, logger: logger}
 }
 
@@ -158,11 +158,11 @@ func (h *LaptopModelsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 // ── Desktop Models ────────────────────────────────────────────────────────────
 
 type DesktopModelsHandler struct {
-	queries *dbsqlc.Queries
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewDesktopModelsHandler(queries *dbsqlc.Queries, logger *slog.Logger) *DesktopModelsHandler {
+func NewDesktopModelsHandler(queries Querier, logger *slog.Logger) *DesktopModelsHandler {
 	return &DesktopModelsHandler{queries: queries, logger: logger}
 }
 

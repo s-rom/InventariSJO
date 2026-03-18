@@ -7,17 +7,15 @@ import (
 	"strconv"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type DesktopsHandler struct {
-	queries *dbsqlc.Queries
-	pool    *pgxpool.Pool
+	queries Querier
+	pool    DB
 	logger  *slog.Logger
 }
 
-func NewDesktopsHandler(queries *dbsqlc.Queries, pool *pgxpool.Pool, logger *slog.Logger) *DesktopsHandler {
+func NewDesktopsHandler(queries Querier, pool DB, logger *slog.Logger) *DesktopsHandler {
 	return &DesktopsHandler{queries: queries, pool: pool, logger: logger}
 }
 
@@ -92,7 +90,7 @@ func (h *DesktopsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context()) //nolint
-	qtx := h.queries.WithTx(tx)
+	qtx := dbsqlc.New(tx)
 
 	computer, err := qtx.CreateComputer(r.Context(), dbsqlc.CreateComputerParams{
 		Hostname:           req.Hostname,
@@ -194,7 +192,7 @@ func (h *DesktopsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context()) //nolint
-	qtx := h.queries.WithTx(tx)
+	qtx := dbsqlc.New(tx)
 
 	old, err := qtx.GetDesktop(r.Context(), id)
 	if err != nil {

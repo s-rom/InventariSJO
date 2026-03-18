@@ -6,18 +6,15 @@ import (
 	"strconv"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AssignmentsHandler struct {
-	queries *dbsqlc.Queries
-	pool    *pgxpool.Pool
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewAssignmentsHandler(queries *dbsqlc.Queries, pool *pgxpool.Pool, logger *slog.Logger) *AssignmentsHandler {
-	return &AssignmentsHandler{queries: queries, pool: pool, logger: logger}
+func NewAssignmentsHandler(queries Querier, logger *slog.Logger) *AssignmentsHandler {
+	return &AssignmentsHandler{queries: queries, logger: logger}
 }
 
 // tutorOwnsClass returns true if the current user is the tutor of classID.

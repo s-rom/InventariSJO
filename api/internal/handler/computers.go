@@ -7,17 +7,15 @@ import (
 	"strconv"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ComputersHandler struct {
-	queries *dbsqlc.Queries
-	pool    *pgxpool.Pool
+	queries Querier
+	pool    DB
 	logger  *slog.Logger
 }
 
-func NewComputersHandler(queries *dbsqlc.Queries, pool *pgxpool.Pool, logger *slog.Logger) *ComputersHandler {
+func NewComputersHandler(queries Querier, pool DB, logger *slog.Logger) *ComputersHandler {
 	return &ComputersHandler{queries: queries, pool: pool, logger: logger}
 }
 
@@ -73,7 +71,7 @@ func (h *ComputersHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	defer tx.Rollback(r.Context()) //nolint
 
-	qtx := h.queries.WithTx(tx)
+	qtx := dbsqlc.New(tx)
 
 	old, err := qtx.GetComputerBase(r.Context(), id)
 	if err != nil {

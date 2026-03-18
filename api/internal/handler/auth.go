@@ -7,19 +7,18 @@ import (
 	"net/http"
 	"strings"
 
-	dbsqlc "inventari/api/internal/db/sqlc"
 	"inventari/api/internal/session"
 
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
-	queries  *dbsqlc.Queries
+	queries  Querier
 	sessions *session.Store
 	logger   *slog.Logger
 }
 
-func NewAuthHandler(queries *dbsqlc.Queries, sessions *session.Store, logger *slog.Logger) *AuthHandler {
+func NewAuthHandler(queries Querier, sessions *session.Store, logger *slog.Logger) *AuthHandler {
 	return &AuthHandler{queries: queries, sessions: sessions, logger: logger}
 }
 

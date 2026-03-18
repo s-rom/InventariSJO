@@ -9,11 +9,11 @@ import (
 )
 
 type CentersHandler struct {
-	queries *dbsqlc.Queries
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewCentersHandler(queries *dbsqlc.Queries, logger *slog.Logger) *CentersHandler {
+func NewCentersHandler(queries Querier, logger *slog.Logger) *CentersHandler {
 	return &CentersHandler{queries: queries, logger: logger}
 }
 

@@ -6,18 +6,15 @@ import (
 	"strconv"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ClassesHandler struct {
-	queries *dbsqlc.Queries
-	pool    *pgxpool.Pool
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewClassesHandler(queries *dbsqlc.Queries, pool *pgxpool.Pool, logger *slog.Logger) *ClassesHandler {
-	return &ClassesHandler{queries: queries, pool: pool, logger: logger}
+func NewClassesHandler(queries Querier, logger *slog.Logger) *ClassesHandler {
+	return &ClassesHandler{queries: queries, logger: logger}
 }
 
 // List returns all classes, optionally filtered by cycle via path value {cycleId}.

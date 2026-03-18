@@ -6,18 +6,15 @@ import (
 	"strconv"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type StudentsHandler struct {
-	queries *dbsqlc.Queries
-	pool    *pgxpool.Pool
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewStudentsHandler(queries *dbsqlc.Queries, pool *pgxpool.Pool, logger *slog.Logger) *StudentsHandler {
-	return &StudentsHandler{queries: queries, pool: pool, logger: logger}
+func NewStudentsHandler(queries Querier, logger *slog.Logger) *StudentsHandler {
+	return &StudentsHandler{queries: queries, logger: logger}
 }
 
 // isTutorOfClass checks if the given user is the tutor of the class

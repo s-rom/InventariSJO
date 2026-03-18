@@ -6,18 +6,15 @@ import (
 	"strconv"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type CyclesHandler struct {
-	queries *dbsqlc.Queries
-	pool    *pgxpool.Pool
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewCyclesHandler(queries *dbsqlc.Queries, pool *pgxpool.Pool, logger *slog.Logger) *CyclesHandler {
-	return &CyclesHandler{queries: queries, pool: pool, logger: logger}
+func NewCyclesHandler(queries Querier, logger *slog.Logger) *CyclesHandler {
+	return &CyclesHandler{queries: queries, logger: logger}
 }
 
 func (h *CyclesHandler) List(w http.ResponseWriter, r *http.Request) {

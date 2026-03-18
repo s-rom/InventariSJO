@@ -6,18 +6,15 @@ import (
 	"strconv"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type AuditHandler struct {
-	queries *dbsqlc.Queries
-	pool    *pgxpool.Pool
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewAuditHandler(queries *dbsqlc.Queries, pool *pgxpool.Pool, logger *slog.Logger) *AuditHandler {
-	return &AuditHandler{queries: queries, pool: pool, logger: logger}
+func NewAuditHandler(queries Querier, logger *slog.Logger) *AuditHandler {
+	return &AuditHandler{queries: queries, logger: logger}
 }
 
 // Get handles GET /audit?table=<tableName>&record_id=<id>

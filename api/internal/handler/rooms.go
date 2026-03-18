@@ -9,11 +9,11 @@ import (
 )
 
 type RoomsHandler struct {
-	queries *dbsqlc.Queries
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewRoomsHandler(queries *dbsqlc.Queries, logger *slog.Logger) *RoomsHandler {
+func NewRoomsHandler(queries Querier, logger *slog.Logger) *RoomsHandler {
 	return &RoomsHandler{queries: queries, logger: logger}
 }
 

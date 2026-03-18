@@ -5,18 +5,15 @@ import (
 	"net/http"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type RolesHandler struct {
-	queries *dbsqlc.Queries
-	pool    *pgxpool.Pool
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewRolesHandler(queries *dbsqlc.Queries, pool *pgxpool.Pool, logger *slog.Logger) *RolesHandler {
-	return &RolesHandler{queries: queries, pool: pool, logger: logger}
+func NewRolesHandler(queries Querier, logger *slog.Logger) *RolesHandler {
+	return &RolesHandler{queries: queries, logger: logger}
 }
 
 func (h *RolesHandler) List(w http.ResponseWriter, r *http.Request) {

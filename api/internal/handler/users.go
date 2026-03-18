@@ -11,11 +11,11 @@ import (
 )
 
 type UsersHandler struct {
-	queries *dbsqlc.Queries
+	queries Querier
 	logger  *slog.Logger
 }
 
-func NewUsersHandler(queries *dbsqlc.Queries, logger *slog.Logger) *UsersHandler {
+func NewUsersHandler(queries Querier, logger *slog.Logger) *UsersHandler {
 	return &UsersHandler{queries: queries, logger: logger}
 }
 

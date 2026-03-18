@@ -7,17 +7,15 @@ import (
 	"strconv"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
-
-	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type LaptopsHandler struct {
-	queries *dbsqlc.Queries
-	pool    *pgxpool.Pool
+	queries Querier
+	pool    DB
 	logger  *slog.Logger
 }
 
-func NewLaptopsHandler(queries *dbsqlc.Queries, pool *pgxpool.Pool, logger *slog.Logger) *LaptopsHandler {
+func NewLaptopsHandler(queries Querier, pool DB, logger *slog.Logger) *LaptopsHandler {
 	return &LaptopsHandler{queries: queries, pool: pool, logger: logger}
 }
 
@@ -91,7 +89,7 @@ func (h *LaptopsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context()) //nolint
-	qtx := h.queries.WithTx(tx)
+	qtx := dbsqlc.New(tx)
 
 	computer, err := qtx.CreateComputer(r.Context(), dbsqlc.CreateComputerParams{
 		Hostname:           req.Hostname,
@@ -191,7 +189,7 @@ func (h *LaptopsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer tx.Rollback(r.Context()) //nolint
-	qtx := h.queries.WithTx(tx)
+	qtx := dbsqlc.New(tx)
 
 	old, err := qtx.GetLaptop(r.Context(), id)
 	if err != nil {
