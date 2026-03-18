@@ -12,8 +12,8 @@ export default function Login({ onLogin }) {
     setError('');
     setLoading(true);
     try {
-      await api.login(username, password);
-      onLogin();
+      const data = await api.login(username, password);
+      onLogin(data);
     } catch (err) {
       setError(err.message);
     } finally {

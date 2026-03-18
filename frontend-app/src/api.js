@@ -1,9 +1,13 @@
 const BASE = '/api';
 const TOKEN_KEY = 'inventari_token';
+const ROLE_KEY   = 'inventari_role';
 
 export function getToken() { return localStorage.getItem(TOKEN_KEY); }
 function setToken(t) { localStorage.setItem(TOKEN_KEY, t); }
 function clearToken() { localStorage.removeItem(TOKEN_KEY); }
+export function getRole() { return localStorage.getItem(ROLE_KEY); }
+function setRole(r) { localStorage.setItem(ROLE_KEY, r); }
+function clearRole() { localStorage.removeItem(ROLE_KEY); }
 
 async function req(path, opts = {}) {
   const token = getToken();
@@ -22,12 +26,15 @@ export const api = {
   login: async (username, password) => {
     const data = await req('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) });
     setToken(data.token);
+    setRole(data.role_id);
     return data;
   },
   logout: async () => {
     await req('/auth/logout', { method: 'POST' }).catch(() => {});
     clearToken();
+    clearRole();
   },
+  me: () => req('/auth/me'),
 
   // ── CPUs ──────────────────────────────────────────────────
   listCpus:   ()         => req('/cpus'),
@@ -113,5 +120,14 @@ export const api = {
   getLaptop:     (id)       => req(`/laptops/${id}`),
   createLaptop:  (data)     => req('/laptops', { method: 'POST',  body: JSON.stringify(data) }),
   updateLaptop:  (id, data) => req(`/laptops/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  // ── Users (admin) ─────────────────────────────────────────
+  listUsers:   ()             => req('/users'),
+  createUser:  (data)         => req('/users', { method: 'POST',  body: JSON.stringify(data) }),
+  updateUser:  (id, data)     => req(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteUser:  (id)           => req(`/users/${id}`, { method: 'DELETE' }),
+
+  // ── Roles (admin) ─────────────────────────────────────────
+  listRoles:   () => req('/roles'),
 };
 

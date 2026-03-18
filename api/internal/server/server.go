@@ -42,6 +42,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	// ─── Auth (public) ────────────────────────────────────────────────────────
 	mux.HandleFunc("POST /auth/login", authH.Login)
 	mux.HandleFunc("POST /auth/logout", authH.Logout)
+	mux.HandleFunc("GET /auth/me", authH.Me)
 
 	// ─── Users ────────────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /users", usersH.List)
@@ -124,6 +125,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	// ─── Laptop Assignments ───────────────────────────────────────────────────
 	mux.HandleFunc("GET /laptops/{laptopId}/assignments", assignmentsH.List)
 	mux.HandleFunc("POST /laptops/{laptopId}/assignments", assignmentsH.Create)
+	mux.HandleFunc("GET /classes/{classId}/assignments", assignmentsH.ListByClass)
 	mux.HandleFunc("GET /assignments/{id}", assignmentsH.Get)
 	mux.HandleFunc("PATCH /assignments/{id}", assignmentsH.Update)
 	mux.HandleFunc("DELETE /assignments/{id}", assignmentsH.Delete)
@@ -135,11 +137,15 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	mux.HandleFunc("DELETE /cycles/{id}", cyclesH.Delete)
 
 	// ─── Classes ──────────────────────────────────────────────────────────────
+	mux.HandleFunc("GET /classes", classesH.List)
 	mux.HandleFunc("GET /cycles/{cycleId}/classes", classesH.List)
 	mux.HandleFunc("POST /cycles/{cycleId}/classes", classesH.Create)
 	mux.HandleFunc("GET /classes/{id}", classesH.Get)
 	mux.HandleFunc("PATCH /classes/{id}", classesH.Update)
 	mux.HandleFunc("DELETE /classes/{id}", classesH.Delete)
+
+	// ─── Tutor ────────────────────────────────────────────────────────────────
+	mux.HandleFunc("GET /tutor/classes", classesH.Mine)
 
 	// ─── Students ─────────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /classes/{classId}/students", studentsH.List)

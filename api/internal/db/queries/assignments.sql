@@ -29,3 +29,13 @@ RETURNING *;
 
 -- name: DeleteAssignment :exec
 DELETE FROM laptop_student_assignment WHERE assignment_id = $1;
+
+-- name: ListAssignmentsByClass :many
+SELECT
+    lsa.assignment_id, lsa.computer_id, lsa.student_id,
+    lsa.class_id, lsa.academic_year,
+    s.full_name AS student_name
+FROM laptop_student_assignment lsa
+JOIN student s ON s.student_id = lsa.student_id
+WHERE lsa.class_id = $1
+ORDER BY lsa.academic_year DESC, s.full_name;

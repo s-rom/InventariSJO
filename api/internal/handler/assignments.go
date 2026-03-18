@@ -46,6 +46,22 @@ func (h *AssignmentsHandler) List(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, assignments)
 }
 
+// ListByClass is called via GET /classes/{classId}/assignments
+func (h *AssignmentsHandler) ListByClass(w http.ResponseWriter, r *http.Request) {
+	classID, err := strconv.ParseInt(r.PathValue("classId"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid classId")
+		return
+	}
+	assignments, err := h.queries.ListAssignmentsByClass(r.Context(), classID)
+	if err != nil {
+		h.logger.Error("list assignments by class", "error", err)
+		respondError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	respondJSON(w, http.StatusOK, assignments)
+}
+
 func (h *AssignmentsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {

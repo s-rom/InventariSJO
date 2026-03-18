@@ -163,6 +163,52 @@ func (q *Queries) ListClassesByCycle(ctx context.Context, cycleID int64) ([]List
 	return items, nil
 }
 
+const listClassesByTutor = `-- name: ListClassesByTutor :many
+SELECT sc.class_id, sc.cycle_id, sc.course, sc.class_label, sc.shift, sc.tutor_app_user_id, cy.name AS cycle_name
+FROM school_class sc
+JOIN cycle cy ON cy.cycle_id = sc.cycle_id
+WHERE sc.tutor_app_user_id = $1
+ORDER BY cy.name, sc.course, sc.class_label
+`
+
+type ListClassesByTutorRow struct {
+	ClassID        int64       `json:"class_id"`
+	CycleID        int64       `json:"cycle_id"`
+	Course         int16       `json:"course"`
+	ClassLabel     string      `json:"class_label"`
+	Shift          ShiftEnum   `json:"shift"`
+	TutorAppUserID pgtype.Int8 `json:"tutor_app_user_id"`
+	CycleName      string      `json:"cycle_name"`
+}
+
+func (q *Queries) ListClassesByTutor(ctx context.Context, tutorAppUserID pgtype.Int8) ([]ListClassesByTutorRow, error) {
+	rows, err := q.db.Query(ctx, listClassesByTutor, tutorAppUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListClassesByTutorRow
+	for rows.Next() {
+		var i ListClassesByTutorRow
+		if err := rows.Scan(
+			&i.ClassID,
+			&i.CycleID,
+			&i.Course,
+			&i.ClassLabel,
+			&i.Shift,
+			&i.TutorAppUserID,
+			&i.CycleName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateClass = `-- name: UpdateClass :one
 UPDATE school_class
 SET

@@ -187,3 +187,15 @@ func (h *ClassesHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
+
+// Mine returns the classes assigned to the currently logged-in tutor.
+func (h *ClassesHandler) Mine(w http.ResponseWriter, r *http.Request) {
+	user := currentUser(r)
+	classes, err := h.queries.ListClassesByTutor(r.Context(), toPgInt8(&user.AppUserID))
+	if err != nil {
+		h.logger.Error("list classes by tutor", "error", err)
+		respondError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	respondJSON(w, http.StatusOK, classes)
+}

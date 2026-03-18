@@ -9,13 +9,14 @@ import (
 
 	dbsqlc "inventari/api/internal/db/sqlc"
 	"inventari/api/internal/session"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AuthHandler struct {
-	queries *dbsqlc.Queries
+	queries  *dbsqlc.Queries
 	sessions *session.Store
-	logger  *slog.Logger
+	logger   *slog.Logger
 }
 
 func NewAuthHandler(queries *dbsqlc.Queries, sessions *session.Store, logger *slog.Logger) *AuthHandler {
@@ -53,7 +54,20 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	h.sessions.Set(token, user)
 
-	respondJSON(w, http.StatusOK, map[string]string{"token": token})
+	respondJSON(w, http.StatusOK, map[string]string{
+		"token":    token,
+		"username": user.Username,
+		"role_id":  user.RoleID,
+	})
+}
+
+func (h *AuthHandler) Me(w http.ResponseWriter, r *http.Request) {
+	user := currentUser(r)
+	respondJSON(w, http.StatusOK, map[string]any{
+		"app_user_id": user.AppUserID,
+		"username":    user.Username,
+		"role_id":     user.RoleID,
+	})
 }
 
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {

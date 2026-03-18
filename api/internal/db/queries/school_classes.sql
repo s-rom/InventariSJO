@@ -30,3 +30,10 @@ RETURNING *;
 
 -- name: DeleteClass :exec
 DELETE FROM school_class WHERE class_id = $1;
+
+-- name: ListClassesByTutor :many
+SELECT sc.*, cy.name AS cycle_name
+FROM school_class sc
+JOIN cycle cy ON cy.cycle_id = sc.cycle_id
+WHERE sc.tutor_app_user_id = $1
+ORDER BY cy.name, sc.course, sc.class_label;

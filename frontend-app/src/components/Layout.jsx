@@ -8,13 +8,18 @@ const NAV = [
   { to: '/reference',             label: '📋 Dades bàsiques' },
 ];
 
-export default function Layout({ children, onLogout }) {
+const ADMIN_NAV = [
+  { to: '/admin/users', label: '👥 Usuaris' },
+];
+
+export default function Layout({ children, onLogout, role }) {
+  const nav = role === 'admin' ? [...NAV, ...ADMIN_NAV] : NAV;
   return (
     <div className="layout">
       <aside className="sidebar">
         <div className="sidebar-brand">Inventari</div>
         <nav style={{ flex: 1 }}>
-          {NAV.map(({ to, label }) => (
+          {nav.map(({ to, label }) => (
             <NavLink
               key={to}
               to={to}
