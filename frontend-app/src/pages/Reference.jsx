@@ -903,11 +903,12 @@ function ClassesTab() {
   const [cycles, setCycles]     = useState([]);
   const [cycleId, setCycleId]   = useState(null);
   const [classes, setClasses]   = useState([]);
+  const [tutors, setTutors]     = useState([]);
   const [saving, setSaving]     = useState(false);
   const [err, setErr]           = useState('');
   const cd                      = useConfirmDelete();
 
-  const EMPTY_CL = { course: '', class_label: '', shift: 'morning' };
+  const EMPTY_CL = { course: '', class_label: '', shift: 'morning', tutor_app_user_id: '' };
   const [form, setForm]         = useState(EMPTY_CL);
   const [editId, setEditId]     = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -918,6 +919,9 @@ function ClassesTab() {
   useEffect(() => {
     api.listCycles()
       .then(d => { const list = d ?? []; setCycles(list); if (list.length > 0) setCycleId(list[0].cycle_id); })
+      .catch(() => {});
+    api.listUsers()
+      .then(d => setTutors((d ?? []).filter(u => u.role_id === 'tutor')))
       .catch(() => {});
   }, []);
 
@@ -931,11 +935,13 @@ function ClassesTab() {
   async function create(e) {
     e.preventDefault(); if (!cycleId) return; setErr(''); setSaving(true);
     try {
-      await api.createClass(cycleId, {
+      const data = {
         course:      parseInt(form.course, 10),
         class_label: form.class_label,
         shift:       form.shift,
-      });
+      };
+      if (form.tutor_app_user_id !== '') data.tutor_app_user_id = parseInt(form.tutor_app_user_id, 10);
+      await api.createClass(cycleId, data);
       setForm(EMPTY_CL); loadClasses();
     } catch (ex) { setErr(ex.message); }
     finally { setSaving(false); }
@@ -943,10 +949,9 @@ function ClassesTab() {
 
   async function save(id) {
     try {
-      await api.updateClass(id, {
-        class_label: editForm.class_label,
-        shift:       editForm.shift,
-      });
+      const patch = { class_label: editForm.class_label, shift: editForm.shift };
+      if (editForm.tutor_app_user_id !== '') patch.tutor_app_user_id = parseInt(editForm.tutor_app_user_id, 10);
+      await api.updateClass(id, patch);
       setEditId(null); loadClasses();
     } catch (ex) { setErr(ex.message); }
   }
@@ -975,7 +980,7 @@ function ClassesTab() {
         <>
           <div className="card" style={{ marginBottom: 14 }}>
             <form onSubmit={create} className="form-panel">
-              <div className="form-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr) auto' }}>
+              <div className="form-grid" style={{ gridTemplateColumns: 'repeat(4, 1fr) auto' }}>
                 <div className="form-group">
                   <label>Curs *</label>
                   <input
@@ -1002,6 +1007,13 @@ function ClassesTab() {
                     {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                   </select>
                 </div>
+                <div className="form-group">
+                  <label>Tutor</label>
+                  <select value={form.tutor_app_user_id} onChange={e => setF('tutor_app_user_id', e.target.value)}>
+                    <option value="">— Cap —</option>
+                    {tutors.map(u => <option key={u.app_user_id} value={u.app_user_id}>{u.username}</option>)}
+                  </select>
+                </div>
                 <div className="form-group" style={{ justifyContent: 'flex-end' }}>
                   <label style={{ visibility: 'hidden' }}>_</label>
                   <button type="submit" className="btn btn-primary" disabled={saving || !form.course || !form.class_label}>
@@ -1015,38 +1027,46 @@ function ClassesTab() {
           <div className="card">
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Curs</th><th>Etiqueta</th><th>Torn</th><th></th></tr></thead>
+                <thead><tr><th>Curs</th><th>Etiqueta</th><th>Torn</th><th>Tutor</th><th></th></tr></thead>
                 <tbody>
-                  {classes.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense cursos per aquest cicle.</td></tr>}
+                  {classes.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense cursos per aquest cicle.</td></tr>}
                   {classes.map(cl => (
-                    <tr key={cl.school_class_id}>
+                    <tr key={cl.class_id}>
                       <td>{cl.course}r</td>
                       <td>
-                        {editId === cl.school_class_id
+                        {editId === cl.class_id
                           ? <input type="text" value={editForm.class_label} onChange={e => setEF('class_label', e.target.value)} style={{ width: 100 }} autoFocus />
                           : cl.class_label}
                       </td>
                       <td>
-                        {editId === cl.school_class_id
+                        {editId === cl.class_id
                           ? <select value={editForm.shift} onChange={e => setEF('shift', e.target.value)} style={{ width: 90 }}>
                               {SHIFTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
                             </select>
                           : SHIFTS.find(s => s.value === cl.shift)?.label ?? cl.shift}
                       </td>
+                      <td>
+                        {editId === cl.class_id
+                          ? <select value={editForm.tutor_app_user_id ?? ''} onChange={e => setEF('tutor_app_user_id', e.target.value)} style={{ width: 130 }}>
+                              <option value="">— Cap —</option>
+                              {tutors.map(u => <option key={u.app_user_id} value={u.app_user_id}>{u.username}</option>)}
+                            </select>
+                          : tutors.find(u => u.app_user_id === cl.tutor_app_user_id)?.username ?? '—'}
+                      </td>
                       <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        {editId === cl.school_class_id ? (
+                        {editId === cl.class_id ? (
                           <>
-                            <button className="btn btn-primary btn-sm" onClick={() => save(cl.school_class_id)}>Guardar</button>
+                            <button className="btn btn-primary btn-sm" onClick={() => save(cl.class_id)}>Guardar</button>
                             <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancel·lar</button>
                           </>
-                        ) : cd.isAsking(cl.school_class_id) ? (
+                        ) : cd.isAsking(cl.class_id) ? (
                           <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
-                            <button className="btn btn-danger btn-sm" onClick={() => del(cl.school_class_id)}>Sí</button>
+                            <button className="btn btn-danger btn-sm" onClick={() => del(cl.class_id)}>Sí</button>
                             <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
                         ) : (
                           <>
-                            <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(cl.school_class_id); setEditForm({ class_label: cl.class_label, shift: cl.shift }); }}>Editar</button>
-                            <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(cl.school_class_id)}>Eliminar</button>
+                            <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(cl.class_id); setEditForm({ class_label: cl.class_label, shift: cl.shift, tutor_app_user_id: cl.tutor_app_user_id ?? '' }); }}>Editar</button>
+                            <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(cl.class_id)}>Eliminar</button>
                           </>
                         )}
                       </td>
@@ -1071,6 +1091,7 @@ export default function Reference() {
     <>
       <div className="page-header">
         <h1 className="page-title">📋 Dades bàsiques</h1>
+        <p> WARNING: Aquesta secció conté referències a dades de tota l'aplicació</p>
       </div>
 
       {/* Tab bar */}

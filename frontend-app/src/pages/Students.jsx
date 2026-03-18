@@ -44,7 +44,7 @@ function StudentsTab() {
     setClassId(null); setClasses([]);
     if (!cycleId) return;
     api.listClassesByCycle(cycleId)
-      .then(d => { const list = d ?? []; setClasses(list); if (list.length) setClassId(list[0].school_class_id); })
+      .then(d => { const list = d ?? []; setClasses(list); if (list.length) setClassId(list[0].class_id); })
       .catch(() => {});
   }, [cycleId]);
 
@@ -94,9 +94,9 @@ function StudentsTab() {
     cd.cancelDelete();
   }
 
-  const selectedClass = classes.find(c => c.school_class_id === classId);
+  const selectedClass = classes.find(c => c.class_id === classId);
   const classOpts = allClasses.map(c => ({
-    value: c.school_class_id,
+    value: c.class_id,
     label: `${c.cycleName} — ${c.course}r ${c.class_label} (${SHIFTS_LABEL[c.shift] ?? c.shift})`,
   }));
 
@@ -116,7 +116,7 @@ function StudentsTab() {
           <select value={classId ?? ''} onChange={e => setClassId(Number(e.target.value))} style={{ width: 200 }}>
             {classes.length === 0 && <option value="">— cap classe —</option>}
             {classes.map(c => (
-              <option key={c.school_class_id} value={c.school_class_id}>
+              <option key={c.class_id} value={c.class_id}>
                 {c.course}r {c.class_label} — {SHIFTS_LABEL[c.shift] ?? c.shift}
               </option>
             ))}
@@ -279,7 +279,7 @@ function AssignmentsTab() {
 
       const studentsNested = await Promise.all(
         flatClasses.map(cl =>
-          api.listStudentsByClass(cl.school_class_id)
+          api.listStudentsByClass(cl.class_id)
             .then(sts => (sts ?? []).map(s => ({ ...s, className: `${cl.cycleName} ${cl.course}r${cl.class_label}` })))
             .catch(() => [])
         )
@@ -341,7 +341,7 @@ function AssignmentsTab() {
   }));
 
   const classOpts = allClasses.map(c => ({
-    value: c.school_class_id,
+    value: c.class_id,
     label: `${c.cycleName} · ${c.course}r ${c.class_label} (${SHIFTS_LABEL[c.shift] ?? c.shift})`,
   }));
 
