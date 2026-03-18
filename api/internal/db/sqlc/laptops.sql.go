@@ -14,18 +14,21 @@ import (
 const createLaptop = `-- name: CreateLaptop :one
 INSERT INTO laptop (
     computer_id, laptop_model_id,
+    serial_number,
     ram_gb, ram_type, storage_gb, storage_type,
     mac_address, os_id, equipment_user_id
 ) VALUES (
     $1, $2,
-    $3, $4, $5, $6,
-    $7, $8, $9
-) RETURNING computer_id, laptop_model_id, ram_gb, ram_type, storage_gb, storage_type, mac_address, os_id, equipment_user_id
+    $3,
+    $4, $5, $6, $7,
+    $8, $9, $10
+) RETURNING computer_id, laptop_model_id, serial_number, ram_gb, ram_type, storage_gb, storage_type, mac_address, os_id, equipment_user_id
 `
 
 type CreateLaptopParams struct {
 	ComputerID      int64               `json:"computer_id"`
 	LaptopModelID   int64               `json:"laptop_model_id"`
+	SerialNumber    pgtype.Text         `json:"serial_number"`
 	RamGb           pgtype.Int4         `json:"ram_gb"`
 	RamType         NullRamTypeEnum     `json:"ram_type"`
 	StorageGb       pgtype.Int4         `json:"storage_gb"`
@@ -39,6 +42,7 @@ func (q *Queries) CreateLaptop(ctx context.Context, arg CreateLaptopParams) (Lap
 	row := q.db.QueryRow(ctx, createLaptop,
 		arg.ComputerID,
 		arg.LaptopModelID,
+		arg.SerialNumber,
 		arg.RamGb,
 		arg.RamType,
 		arg.StorageGb,
@@ -51,6 +55,7 @@ func (q *Queries) CreateLaptop(ctx context.Context, arg CreateLaptopParams) (Lap
 	err := row.Scan(
 		&i.ComputerID,
 		&i.LaptopModelID,
+		&i.SerialNumber,
 		&i.RamGb,
 		&i.RamType,
 		&i.StorageGb,
@@ -66,7 +71,7 @@ const getLaptop = `-- name: GetLaptop :one
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    l.laptop_model_id, l.ram_gb, l.ram_type,
+    l.laptop_model_id, l.serial_number, l.ram_gb, l.ram_type,
     l.storage_gb, l.storage_type, l.mac_address,
     l.os_id, l.equipment_user_id
 FROM computer c
@@ -83,6 +88,7 @@ type GetLaptopRow struct {
 	CreatedAt          pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz  `json:"updated_at"`
 	LaptopModelID      int64               `json:"laptop_model_id"`
+	SerialNumber       pgtype.Text         `json:"serial_number"`
 	RamGb              pgtype.Int4         `json:"ram_gb"`
 	RamType            NullRamTypeEnum     `json:"ram_type"`
 	StorageGb          pgtype.Int4         `json:"storage_gb"`
@@ -104,6 +110,7 @@ func (q *Queries) GetLaptop(ctx context.Context, computerID int64) (GetLaptopRow
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.LaptopModelID,
+		&i.SerialNumber,
 		&i.RamGb,
 		&i.RamType,
 		&i.StorageGb,
@@ -119,7 +126,7 @@ const listLaptops = `-- name: ListLaptops :many
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    l.laptop_model_id, l.ram_gb, l.ram_type,
+    l.laptop_model_id, l.serial_number, l.ram_gb, l.ram_type,
     l.storage_gb, l.storage_type, l.mac_address,
     l.os_id, l.equipment_user_id
 FROM computer c
@@ -136,6 +143,7 @@ type ListLaptopsRow struct {
 	CreatedAt          pgtype.Timestamptz  `json:"created_at"`
 	UpdatedAt          pgtype.Timestamptz  `json:"updated_at"`
 	LaptopModelID      int64               `json:"laptop_model_id"`
+	SerialNumber       pgtype.Text         `json:"serial_number"`
 	RamGb              pgtype.Int4         `json:"ram_gb"`
 	RamType            NullRamTypeEnum     `json:"ram_type"`
 	StorageGb          pgtype.Int4         `json:"storage_gb"`
@@ -163,6 +171,7 @@ func (q *Queries) ListLaptops(ctx context.Context) ([]ListLaptopsRow, error) {
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.LaptopModelID,
+			&i.SerialNumber,
 			&i.RamGb,
 			&i.RamType,
 			&i.StorageGb,
@@ -185,19 +194,21 @@ const updateLaptop = `-- name: UpdateLaptop :one
 UPDATE laptop
 SET
     laptop_model_id   = COALESCE($1,   laptop_model_id),
-    ram_gb            = COALESCE($2,            ram_gb),
-    ram_type          = COALESCE($3,          ram_type),
-    storage_gb        = COALESCE($4,        storage_gb),
-    storage_type      = COALESCE($5,      storage_type),
-    mac_address       = COALESCE($6,       mac_address),
-    os_id             = COALESCE($7,             os_id),
-    equipment_user_id = COALESCE($8, equipment_user_id)
-WHERE computer_id = $9
-RETURNING computer_id, laptop_model_id, ram_gb, ram_type, storage_gb, storage_type, mac_address, os_id, equipment_user_id
+    serial_number     = COALESCE($2,     serial_number),
+    ram_gb            = COALESCE($3,            ram_gb),
+    ram_type          = COALESCE($4,          ram_type),
+    storage_gb        = COALESCE($5,        storage_gb),
+    storage_type      = COALESCE($6,      storage_type),
+    mac_address       = COALESCE($7,       mac_address),
+    os_id             = COALESCE($8,             os_id),
+    equipment_user_id = COALESCE($9, equipment_user_id)
+WHERE computer_id = $10
+RETURNING computer_id, laptop_model_id, serial_number, ram_gb, ram_type, storage_gb, storage_type, mac_address, os_id, equipment_user_id
 `
 
 type UpdateLaptopParams struct {
 	LaptopModelID   pgtype.Int8         `json:"laptop_model_id"`
+	SerialNumber    pgtype.Text         `json:"serial_number"`
 	RamGb           pgtype.Int4         `json:"ram_gb"`
 	RamType         NullRamTypeEnum     `json:"ram_type"`
 	StorageGb       pgtype.Int4         `json:"storage_gb"`
@@ -211,6 +222,7 @@ type UpdateLaptopParams struct {
 func (q *Queries) UpdateLaptop(ctx context.Context, arg UpdateLaptopParams) (Laptop, error) {
 	row := q.db.QueryRow(ctx, updateLaptop,
 		arg.LaptopModelID,
+		arg.SerialNumber,
 		arg.RamGb,
 		arg.RamType,
 		arg.StorageGb,
@@ -224,6 +236,7 @@ func (q *Queries) UpdateLaptop(ctx context.Context, arg UpdateLaptopParams) (Lap
 	err := row.Scan(
 		&i.ComputerID,
 		&i.LaptopModelID,
+		&i.SerialNumber,
 		&i.RamGb,
 		&i.RamType,
 		&i.StorageGb,

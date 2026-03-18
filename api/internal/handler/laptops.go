@@ -61,6 +61,7 @@ func (h *LaptopsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		RoomID          *int64  `json:"room_id"`
 		Observations    *string `json:"observations"`
 		LaptopModelID   int64   `json:"laptop_model_id"`
+		SerialNumber    *string `json:"serial_number"`
 		RamGb           *int32  `json:"ram_gb"`
 		RamType         *string `json:"ram_type"`
 		StorageGb       *int32  `json:"storage_gb"`
@@ -107,6 +108,7 @@ func (h *LaptopsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	laptop, err := qtx.CreateLaptop(r.Context(), dbsqlc.CreateLaptopParams{
 		ComputerID:      computer.ComputerID,
 		LaptopModelID:   req.LaptopModelID,
+		SerialNumber:    toPgText(req.SerialNumber),
 		RamGb:           toPgInt4(req.RamGb),
 		RamType:         ramType,
 		StorageGb:       toPgInt4(req.StorageGb),
@@ -159,6 +161,7 @@ func (h *LaptopsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		RoomID          *int64  `json:"room_id"`
 		Observations    *string `json:"observations"`
 		LaptopModelID   *int64  `json:"laptop_model_id"`
+		SerialNumber    *string `json:"serial_number"`
 		RamGb           *int32  `json:"ram_gb"`
 		RamType         *string `json:"ram_type"`
 		StorageGb       *int32  `json:"storage_gb"`
@@ -214,6 +217,7 @@ func (h *LaptopsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	updated, err := qtx.UpdateLaptop(r.Context(), dbsqlc.UpdateLaptopParams{
 		ComputerID:      id,
 		LaptopModelID:   toPgInt8(req.LaptopModelID),
+		SerialNumber:    toPgText(req.SerialNumber),
 		RamGb:           toPgInt4(req.RamGb),
 		RamType:         ramType,
 		StorageGb:       toPgInt4(req.StorageGb),

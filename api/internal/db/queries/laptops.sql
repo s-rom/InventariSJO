@@ -2,7 +2,7 @@
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    l.laptop_model_id, l.ram_gb, l.ram_type,
+    l.laptop_model_id, l.serial_number, l.ram_gb, l.ram_type,
     l.storage_gb, l.storage_type, l.mac_address,
     l.os_id, l.equipment_user_id
 FROM computer c
@@ -13,7 +13,7 @@ ORDER BY c.computer_id;
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    l.laptop_model_id, l.ram_gb, l.ram_type,
+    l.laptop_model_id, l.serial_number, l.ram_gb, l.ram_type,
     l.storage_gb, l.storage_type, l.mac_address,
     l.os_id, l.equipment_user_id
 FROM computer c
@@ -23,10 +23,12 @@ WHERE c.computer_id = $1;
 -- name: CreateLaptop :one
 INSERT INTO laptop (
     computer_id, laptop_model_id,
+    serial_number,
     ram_gb, ram_type, storage_gb, storage_type,
     mac_address, os_id, equipment_user_id
 ) VALUES (
     @computer_id, @laptop_model_id,
+    sqlc.narg(serial_number),
     sqlc.narg(ram_gb), sqlc.narg(ram_type), sqlc.narg(storage_gb), sqlc.narg(storage_type),
     sqlc.narg(mac_address), sqlc.narg(os_id), sqlc.narg(equipment_user_id)
 ) RETURNING *;
@@ -35,6 +37,7 @@ INSERT INTO laptop (
 UPDATE laptop
 SET
     laptop_model_id   = COALESCE(sqlc.narg(laptop_model_id),   laptop_model_id),
+    serial_number     = COALESCE(sqlc.narg(serial_number),     serial_number),
     ram_gb            = COALESCE(sqlc.narg(ram_gb),            ram_gb),
     ram_type          = COALESCE(sqlc.narg(ram_type),          ram_type),
     storage_gb        = COALESCE(sqlc.narg(storage_gb),        storage_gb),

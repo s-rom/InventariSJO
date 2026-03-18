@@ -268,6 +268,7 @@ type EquipmentUser struct {
 type Laptop struct {
 	ComputerID      int64               `json:"computer_id"`
 	LaptopModelID   int64               `json:"laptop_model_id"`
+	SerialNumber    pgtype.Text         `json:"serial_number"`
 	RamGb           pgtype.Int4         `json:"ram_gb"`
 	RamType         NullRamTypeEnum     `json:"ram_type"`
 	StorageGb       pgtype.Int4         `json:"storage_gb"`

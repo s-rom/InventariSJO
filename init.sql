@@ -1,11 +1,11 @@
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
+CREATE EXTENSION IF NOT EXISTS pgcrypto; -- Per crear l'admin inicial
 
 -- ============================================================
 -- ENUM TYPES
 -- ============================================================
 -- 'None' = genuïnament sense RAM/disc (p.ex. equip al taller sense memoria)
 -- NULL   = no modificat respecte al model base (laptop_model / desktop_model)
--- Ambdós valors s'utilitzen en contextos diferents; vegeu comentaris de desktop i laptop.
+-- Ambdós valors s'utilitzen en contextos diferents; veure comentaris de desktop i laptop.
 CREATE TYPE ram_type_enum       AS ENUM ('DDR3', 'DDR4', 'DDR5', 'None');
 CREATE TYPE storage_type_enum   AS ENUM ('HDD', 'SSD', 'NVMe', 'None');
 CREATE TYPE audit_event_enum    AS ENUM ('created', 'updated', 'deleted');
@@ -206,6 +206,9 @@ CREATE INDEX ON desktop (equipment_user_id);
 CREATE TABLE laptop (
     computer_id       BIGINT PRIMARY KEY REFERENCES computer (computer_id) ON DELETE CASCADE,
     laptop_model_id   BIGINT NOT NULL REFERENCES laptop_model (laptop_model_id),
+
+    -- Número de serie del dispositivo (si es conegut)
+    serial_number     TEXT UNIQUE DEFAULT NULL,
 
     -- NULL = igual que laptop_model.base_*
     ram_gb            INTEGER DEFAULT NULL CHECK (ram_gb IS NULL OR ram_gb >= 0),
