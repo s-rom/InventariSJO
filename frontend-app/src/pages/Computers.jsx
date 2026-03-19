@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
+import { useAuth } from '../App';
 
 function osEmoji(name = '') {
   const n = (name ?? '').toLowerCase();
@@ -28,6 +29,8 @@ function storageLabel(gb, type) {
 
 export default function Computers() {
   const navigate = useNavigate();
+  const { role }  = useAuth();
+  const canEdit   = role !== 'readonly';
 
   const [desktops,       setDesktops]       = useState([]);
   const [laptops,        setLaptops]        = useState([]);
@@ -83,6 +86,17 @@ export default function Computers() {
 
   const R = refs;
 
+  async function handleDelete(id, hostname) {
+    if (!confirm(`Eliminar l'equip "${hostname}"?`)) return;
+    try {
+      await api.deleteComputer(id);
+      setDesktops(prev => prev.filter(d => d.computer_id !== id));
+      setLaptops(prev  => prev.filter(l => l.computer_id !== id));
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   return (
     <>
       {/* DESKTOPS */}
@@ -111,6 +125,7 @@ export default function Computers() {
                   <th>WiFi</th>
                   <th>MAC</th>
                   <th>Usuari equip</th>
+                  {canEdit && <th></th>}
                 </tr>
               </thead>
               <tbody>
@@ -126,6 +141,13 @@ export default function Computers() {
                     <td style={{ textAlign: 'center' }}>{d.has_wifi_card ? '✔' : '—'}</td>
                     <td><code style={{ fontSize: 11 }}>{d.mac_address ?? '—'}</code></td>
                     <td>{d.equipment_user_id ? R.equipMap[d.equipment_user_id] ?? '—' : '—'}</td>
+                    {canEdit && (
+                      <td>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d.computer_id, d.hostname)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -158,6 +180,7 @@ export default function Computers() {
                   <th>Emmagatzematge</th>
                   <th>MAC</th>
                   <th>Usuari equip</th>
+                  {canEdit && <th></th>}
                 </tr>
               </thead>
               <tbody>
@@ -171,6 +194,13 @@ export default function Computers() {
                     <td>{storageLabel(l.storage_gb, l.storage_type)}</td>
                     <td><code style={{ fontSize: 11 }}>{l.mac_address ?? '—'}</code></td>
                     <td>{l.equipment_user_id ? R.equipMap[l.equipment_user_id] ?? '—' : '—'}</td>
+                    {canEdit && (
+                      <td>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(l.computer_id, l.hostname)}>
+                          Eliminar
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

@@ -110,6 +110,9 @@ export const api = {
   updateAssignment:        (id, data)       => req(`/assignments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteAssignment:        (id)             => req(`/assignments/${id}`, { method: 'DELETE' }),
 
+  // ── Computers (base) ────────────────────────────────────
+  deleteComputer: (id)       => req(`/computers/${id}`, { method: 'DELETE' }),
+
   // ── Desktops ──────────────────────────────────────────────
   listDesktops:   ()         => req('/desktops'),
   getDesktop:     (id)       => req(`/desktops/${id}`),
