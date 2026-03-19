@@ -150,6 +150,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	// ─── Students ─────────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /classes/{classId}/students", studentsH.List)
 	mux.HandleFunc("POST /classes/{classId}/students", studentsH.Create)
+	mux.HandleFunc("POST /classes/{classId}/students/import", studentsH.ImportCSV)
 	mux.HandleFunc("GET /students/{id}", studentsH.Get)
 	mux.HandleFunc("PATCH /students/{id}", studentsH.Update)
 	mux.HandleFunc("DELETE /students/{id}", studentsH.Delete)

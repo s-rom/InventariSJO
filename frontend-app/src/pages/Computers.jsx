@@ -37,6 +37,7 @@ export default function Computers() {
   const [refs,           setRefs]           = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [err,            setErr]            = useState('');
+  const [query,          setQuery]          = useState('');
 
   useEffect(() => {
     async function load() {
@@ -86,6 +87,41 @@ export default function Computers() {
 
   const R = refs;
 
+  const q = query.trim().toLowerCase();
+  const filteredDesktops = q
+    ? desktops.filter(d => [
+        d.hostname,
+        R.roomMap[d.room_id],
+        d.desktop_model_id ? R.dmMap[d.desktop_model_id] : null,
+        d.cpu_id ? R.cpuMap[d.cpu_id] : null,
+        R.osMap[d.os_id],
+        d.ram_gb != null ? `${d.ram_gb} GB` : null,
+        d.ram_type,
+        d.storage_gb != null ? `${d.storage_gb} GB` : null,
+        d.storage_type,
+        d.mac_address,
+        d.equipment_user_id ? R.equipMap[d.equipment_user_id] : null,
+        d.observations,
+      ].filter(Boolean).join(' ').toLowerCase().includes(q))
+    : desktops;
+
+  const filteredLaptops = q
+    ? laptops.filter(l => [
+        l.hostname,
+        R.roomMap[l.room_id],
+        l.laptop_model_id ? R.lmMap[l.laptop_model_id] : null,
+        R.osMap[l.os_id],
+        l.ram_gb != null ? `${l.ram_gb} GB` : null,
+        l.ram_type,
+        l.storage_gb != null ? `${l.storage_gb} GB` : null,
+        l.storage_type,
+        l.mac_address,
+        l.serial_number,
+        l.equipment_user_id ? R.equipMap[l.equipment_user_id] : null,
+        l.observations,
+      ].filter(Boolean).join(' ').toLowerCase().includes(q))
+    : laptops;
+
   async function handleDelete(id, hostname) {
     if (!confirm(`Eliminar l'equip "${hostname}"?`)) return;
     try {
@@ -99,6 +135,22 @@ export default function Computers() {
 
   return (
     <>
+      {/* SEARCH BAR */}
+      <div style={{ marginBottom: 24 }}>
+        <input
+          type="search"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Cercar per hostname, aula, model, CPU, MAC…"
+          style={{ width: '100%', maxWidth: 480, padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 14 }}
+        />
+        {q && (
+          <span style={{ marginLeft: 12, fontSize: 13, color: 'var(--muted)' }}>
+            {filteredDesktops.length + filteredLaptops.length} resultat{filteredDesktops.length + filteredLaptops.length !== 1 ? 's' : ''}
+          </span>
+        )}
+      </div>
+
       {/* DESKTOPS */}
       <div className="page-header">
         <h1 className="page-title">🖥️ Sobretaules</h1>
@@ -108,8 +160,8 @@ export default function Computers() {
       </div>
 
       <div className="card" style={{ marginBottom: 32 }}>
-        {desktops.length === 0 ? (
-          <div className="empty">Cap sobretaula registrat.</div>
+        {filteredDesktops.length === 0 ? (
+          <div className="empty">{q ? 'Cap resultat.' : 'Cap sobretaula registrat.'}</div>
         ) : (
           <div className="table-wrap">
             <table>
@@ -129,7 +181,7 @@ export default function Computers() {
                 </tr>
               </thead>
               <tbody>
-                {desktops.map(d => (
+                {filteredDesktops.map(d => (
                   <tr key={d.computer_id}>
                     <td><strong>{d.hostname}</strong></td>
                     <td>{R.roomMap[d.room_id] ?? '—'}</td>
@@ -165,8 +217,8 @@ export default function Computers() {
       </div>
 
       <div className="card">
-        {laptops.length === 0 ? (
-          <div className="empty">Cap portàtil registrat.</div>
+        {filteredLaptops.length === 0 ? (
+          <div className="empty">{q ? 'Cap resultat.' : 'Cap portàtil registrat.'}</div>
         ) : (
           <div className="table-wrap">
             <table>
@@ -184,7 +236,7 @@ export default function Computers() {
                 </tr>
               </thead>
               <tbody>
-                {laptops.map(l => (
+                {filteredLaptops.map(l => (
                   <tr key={l.computer_id}>
                     <td><strong>{l.hostname}</strong></td>
                     <td>{R.roomMap[l.room_id] ?? '—'}</td>

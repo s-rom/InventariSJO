@@ -34,6 +34,7 @@ function StudentsTab() {
   const [editClassId,setEditClassId]= useState(null);
   const [saving,     setSaving]     = useState(false);
   const [err,        setErr]        = useState('');
+  const [csvResult,  setCsvResult]  = useState(null);
   const cd = useConfirmDelete();
 
   // Load initial class list
@@ -112,6 +113,18 @@ function StudentsTab() {
     cd.cancelDelete();
   }
 
+  async function handleImportCSV(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setErr(''); setCsvResult(null);
+    try {
+      const result = await api.importStudentsCSV(classId, file);
+      setCsvResult(result);
+      loadStudents();
+    } catch (ex) { setErr(ex.message); }
+  }
+
   const selectedClass = classes.find(c => c.class_id === classId);
   const classOpts = allClasses.map(c => ({
     value: c.class_id,
@@ -177,6 +190,21 @@ function StudentsTab() {
                   </button>
                 </div>
               </div>
+              {!isTutor && (
+                <div style={{ marginTop: 10, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  <label className="btn btn-ghost btn-sm" style={{ cursor: 'pointer', marginBottom: 0 }}>
+                    📥 Importar CSV
+                    <input type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={handleImportCSV} />
+                  </label>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>Primera columna = nom de l&apos;alumne, primera fila = capçalera</span>
+                  {csvResult && (
+                    <span style={{ fontSize: 12 }}>
+                      ✅ {csvResult.imported} importats
+                      {csvResult.skipped?.length > 0 && <> · ⚠️ {csvResult.skipped.length} omesos: {csvResult.skipped.join(', ')}</>}
+                    </span>
+                  )}
+                </div>
+              )}
               {err && <div className="error-msg">{err}</div>}
             </form>
           </div>
@@ -529,15 +557,168 @@ function AssignmentsTab() {
 }
 
 // ─────────────────────────────────────────────
+// Tutor view: student-centric assignment table
+// ─────────────────────────────────────────────
+function TutorView() {
+  function currentAcademicYear() {
+    const now = new Date();
+    const y = now.getFullYear();
+    return now.getMonth() >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
+  }
+
+  const [classes,     setClasses]     = useState([]);
+  const [classId,     setClassId]     = useState(null);
+  const [students,    setStudents]    = useState([]);
+  const [assignments, setAssignments] = useState([]);
+  const [laptops,     setLaptops]     = useState([]);
+  const [pendingId,   setPendingId]   = useState(null);
+  const [err,         setErr]         = useState('');
+
+  useEffect(() => {
+    Promise.all([api.listMyClasses(), api.listLaptops()])
+      .then(([cls, lts]) => {
+        const list = cls ?? [];
+        setClasses(list);
+        if (list.length) setClassId(list[0].class_id);
+        setLaptops(lts ?? []);
+      })
+      .catch(() => {});
+  }, []);
+
+  const loadData = useCallback(async () => {
+    if (!classId) return;
+    const [sts, asgns] = await Promise.all([
+      api.listStudentsByClass(classId).catch(() => []),
+      api.listAssignmentsByClass(classId).catch(() => []),
+    ]);
+    setStudents(sts ?? []);
+    setAssignments(asgns ?? []);
+  }, [classId]);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const assignmentByStudent = Object.fromEntries(
+    (assignments ?? []).map(a => [a.student_id, a])
+  );
+
+  const laptopOpts = laptops.map(l => ({ value: l.computer_id, label: l.hostname }));
+
+  async function handleAssign(studentId, newLaptopId) {
+    setPendingId(studentId);
+    setErr('');
+    const existing = assignmentByStudent[studentId];
+    try {
+      if (existing) {
+        await api.deleteAssignment(existing.assignment_id);
+      }
+      if (newLaptopId) {
+        await api.createAssignment(newLaptopId, {
+          student_id:    studentId,
+          class_id:      classId,
+          academic_year: currentAcademicYear(),
+        });
+      }
+      await loadData();
+    } catch (ex) {
+      setErr(ex.message);
+    } finally {
+      setPendingId(null);
+    }
+  }
+
+  const selectedClass = classes.find(c => c.class_id === classId);
+
+  return (
+    <div>
+      <div className="filter-bar">
+        <div className="filter-item">
+          <label>Classe</label>
+          <select value={classId ?? ''} onChange={e => setClassId(Number(e.target.value))} style={{ width: 240 }}>
+            {classes.length === 0 && <option value="">— sense cursos assignats —</option>}
+            {classes.map(c => (
+              <option key={c.class_id} value={c.class_id}>
+                {c.cycle_name ?? ''} · {c.course}r {c.class_label} — {SHIFTS_LABEL[c.shift] ?? c.shift}
+              </option>
+            ))}
+          </select>
+        </div>
+        {selectedClass && (
+          <div className="filter-badge">
+            <strong>{students.length}</strong> alumnes · any {currentAcademicYear()}
+          </div>
+        )}
+      </div>
+
+      {err && <div className="error-msg" style={{ marginBottom: 12 }}>{err}</div>}
+
+      {classId && (
+        <div className="card">
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Alumne</th>
+                  <th>Portàtil assignat</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.length === 0 && (
+                  <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>
+                    Cap alumne a aquesta classe.
+                  </td></tr>
+                )}
+                {students.map(s => {
+                  const assignment = assignmentByStudent[s.student_id];
+                  return (
+                    <tr key={s.student_id}>
+                      <td><strong>{s.full_name}</strong></td>
+                      <td style={{ minWidth: 260 }}>
+                        {pendingId === s.student_id
+                          ? <span style={{ color: 'var(--muted)', fontSize: 12 }}>Guardant…</span>
+                          : <Combobox
+                              options={laptopOpts}
+                              value={assignment?.computer_id ?? null}
+                              onChange={v => handleAssign(s.student_id, v)}
+                              placeholder="Sense assignació…"
+                              nullable
+                            />
+                        }
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────
 // Main page
 // ─────────────────────────────────────────────
 export default function Students() {
+  const { role } = useAuth();
+  const isTutor  = role === 'tutor';
   const [tab, setTab] = useState('students');
+
+  if (isTutor) {
+    return (
+      <>
+        <div className="page-header">
+          <h1 className="page-title">💻 Assignacions de portàtils</h1>
+        </div>
+        <TutorView />
+      </>
+    );
+  }
 
   return (
     <>
       <div className="page-header">
-        <h1 className="page-title">👨‍🎓 Alumnes & Assignacions</h1>
+        <h1 className="page-title">👨‍🎓 Alumnes &amp; Assignacions</h1>
       </div>
 
       <div className="ref-tabs" style={{ marginBottom: 20 }}>

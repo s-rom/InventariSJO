@@ -191,7 +191,6 @@ function BrandsTab() {
   const [name, setName]     = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
-  const cd                  = useConfirmDelete();
 
   const load = useCallback(() => api.listBrands().then(d => setList(d ?? [])).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
@@ -201,11 +200,6 @@ function BrandsTab() {
     try { await api.createBrand({ name }); setName(''); load(); }
     catch (ex) { setErr(ex.message); }
     finally { setSaving(false); }
-  }
-
-  async function del(id) {
-    try { await api.deleteBrand(id); load(); } catch (ex) { setErr(ex.message); }
-    cd.cancelDelete();
   }
 
   return (
@@ -235,14 +229,7 @@ function BrandsTab() {
               {list.map(b => (
                 <tr key={b.brand_id}>
                   <td>{b.name}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    {cd.isAsking(b.brand_id)
-                      ? <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
-                          <button className="btn btn-danger btn-sm" onClick={() => del(b.brand_id)}>Sí</button>
-                          <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
-                      : <button className="btn btn-danger btn-sm" onClick={() => cd.askDelete(b.brand_id)}>Eliminar</button>
-                    }
-                  </td>
+                  <td></td>
                 </tr>
               ))}
             </tbody>
@@ -259,7 +246,6 @@ function LaptopModelsTab() {
   const [refs, setRefs]     = useState(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
-  const cd                  = useConfirmDelete();
 
   const EMPTY_LM = { brand_id: null, model_name: '', cpu_id: null, base_ram_gb: '', base_ram_type: 'DDR4', base_storage_gb: '', base_storage_type: 'SSD', base_os_id: null };
   const [form, setForm] = useState(EMPTY_LM);
@@ -293,11 +279,6 @@ function LaptopModelsTab() {
       setForm(EMPTY_LM); load();
     } catch (ex) { setErr(ex.message); }
     finally { setSaving(false); }
-  }
-
-  async function del(id) {
-    try { await api.deleteLaptopModel(id); load(); } catch (ex) { setErr(ex.message); }
-    cd.cancelDelete();
   }
 
   if (!refs) return <div className="empty">Carregant…</div>;
@@ -367,14 +348,7 @@ function LaptopModelsTab() {
                   <td>{m.model_name}</td>
                   <td>{m.base_ram_gb} GB {m.base_ram_type}</td>
                   <td>{m.base_storage_gb} GB {m.base_storage_type}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    {cd.isAsking(m.laptop_model_id)
-                      ? <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
-                          <button className="btn btn-danger btn-sm" onClick={() => del(m.laptop_model_id)}>Sí</button>
-                          <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
-                      : <button className="btn btn-danger btn-sm" onClick={() => cd.askDelete(m.laptop_model_id)}>Eliminar</button>
-                    }
-                  </td>
+                  <td></td>
                 </tr>
               ))}
             </tbody>

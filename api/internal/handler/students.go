@@ -1,9 +1,11 @@
 package handler
 
 import (
+	"encoding/csv"
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	dbsqlc "inventari/api/internal/db/sqlc"
 )
@@ -186,4 +188,62 @@ func (h *StudentsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// ImportCSV handles POST /classes/{classId}/students/import
+// Expects a multipart/form-data body with a "file" field containing a CSV.
+// The first row is treated as a header; the first column of each subsequent
+// row is used as the student's full_name. Empty names are skipped.
+// Only admin and editor roles are allowed.
+func (h *StudentsHandler) ImportCSV(w http.ResponseWriter, r *http.Request) {
+	if !requireRole(w, r, RoleAdmin, RoleEditor) {
+		return
+	}
+	classID, err := strconv.ParseInt(r.PathValue("classId"), 10, 64)
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid classId")
+		return
+	}
+
+	if err := r.ParseMultipartForm(1 << 20); err != nil { // 1 MB limit
+		respondError(w, http.StatusBadRequest, "cannot parse form")
+		return
+	}
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "file field required")
+		return
+	}
+	defer file.Close()
+
+	records, err := csv.NewReader(file).ReadAll()
+	if err != nil {
+		respondError(w, http.StatusBadRequest, "invalid CSV")
+		return
+	}
+
+	imported := 0
+	var skipped []string
+	for _, row := range records[1:] { // skip header row
+		if len(row) == 0 {
+			continue
+		}
+		name := strings.TrimSpace(row[0])
+		if name == "" {
+			continue
+		}
+		if _, err := h.queries.CreateStudent(r.Context(), dbsqlc.CreateStudentParams{
+			FullName: name,
+			ClassID:  classID,
+		}); err != nil {
+			skipped = append(skipped, name)
+			continue
+		}
+		imported++
+	}
+
+	respondJSON(w, http.StatusOK, map[string]any{
+		"imported": imported,
+		"skipped":  skipped,
+	})
 }

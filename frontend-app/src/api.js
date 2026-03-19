@@ -103,9 +103,23 @@ export const api = {
   createStudent:       (classId, data) => req(`/classes/${classId}/students`, { method: 'POST',  body: JSON.stringify(data) }),
   updateStudent:       (id, data)      => req(`/students/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteStudent:       (id)            => req(`/students/${id}`, { method: 'DELETE' }),
+  importStudentsCSV: (classId, file) => {
+    const token = getToken();
+    const headers = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const form = new FormData();
+    form.append('file', file);
+    return fetch(`${BASE}/classes/${classId}/students/import`, { method: 'POST', headers, body: form })
+      .then(async res => {
+        const json = await res.json().catch(() => null);
+        if (!res.ok) throw new Error(json?.error || `Error ${res.status}`);
+        return json;
+      });
+  },
 
   // ── Laptop Assignments ────────────────────────────────────
   listAssignmentsByLaptop: (laptopId)       => req(`/laptops/${laptopId}/assignments`),
+  listAssignmentsByClass:  (classId)        => req(`/classes/${classId}/assignments`),
   createAssignment:        (laptopId, data) => req(`/laptops/${laptopId}/assignments`, { method: 'POST',  body: JSON.stringify(data) }),
   updateAssignment:        (id, data)       => req(`/assignments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteAssignment:        (id)             => req(`/assignments/${id}`, { method: 'DELETE' }),

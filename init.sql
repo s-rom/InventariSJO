@@ -98,13 +98,13 @@ CREATE TABLE laptop_model (
     laptop_model_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     brand_id          BIGINT NOT NULL REFERENCES brand (brand_id),
     model_name        TEXT NOT NULL,
-    cpu_id            BIGINT REFERENCES cpu (cpu_id),
+    cpu_id            BIGINT REFERENCES cpu (cpu_id) ON DELETE SET NULL,
     base_ram_gb       INTEGER NOT NULL DEFAULT 0 CHECK (base_ram_gb >= 0),
     base_ram_type     ram_type_enum NOT NULL DEFAULT 'None',
     base_storage_gb   INTEGER NOT NULL DEFAULT 0 CHECK (base_storage_gb >= 0),
     base_storage_type storage_type_enum NOT NULL DEFAULT 'None',
     -- SO natiu del model (p. ex. ChromeOS, Windows); pot haver canviat en la unitat concreta
-    base_os_id        BIGINT REFERENCES os (os_id),
+    base_os_id        BIGINT REFERENCES os (os_id) ON DELETE SET NULL,
 
     UNIQUE (brand_id, model_name)
 );
@@ -123,12 +123,12 @@ CREATE TABLE desktop_model (
     desktop_model_id  BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     brand_id          BIGINT NOT NULL REFERENCES brand (brand_id),
     model_name        TEXT NOT NULL,
-    cpu_id            BIGINT REFERENCES cpu (cpu_id),
+    cpu_id            BIGINT REFERENCES cpu (cpu_id) ON DELETE SET NULL,
     base_ram_gb       INTEGER NOT NULL DEFAULT 0 CHECK (base_ram_gb >= 0),
     base_ram_type     ram_type_enum NOT NULL DEFAULT 'None',
     base_storage_gb   INTEGER NOT NULL DEFAULT 0 CHECK (base_storage_gb >= 0),
     base_storage_type storage_type_enum NOT NULL DEFAULT 'None',
-    base_os_id        BIGINT REFERENCES os (os_id),
+    base_os_id        BIGINT REFERENCES os (os_id) ON DELETE SET NULL,
 
     UNIQUE (brand_id, model_name)
 );
@@ -144,7 +144,7 @@ CREATE INDEX ON desktop_model (cpu_id);
 CREATE TABLE computer (
     computer_id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     hostname               TEXT NOT NULL UNIQUE,
-    room_id                BIGINT REFERENCES room (room_id),
+    room_id                BIGINT REFERENCES room (room_id) ON DELETE SET NULL,
     observations           TEXT DEFAULT NULL,
     created_by_app_user_id BIGINT NOT NULL REFERENCES app_user (app_user_id),
     created_at             TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -166,14 +166,14 @@ CREATE INDEX ON computer (created_by_app_user_id);
 -- ============================================================
 CREATE TABLE desktop (
     computer_id       BIGINT PRIMARY KEY REFERENCES computer (computer_id) ON DELETE CASCADE,
-    desktop_model_id  BIGINT DEFAULT NULL REFERENCES desktop_model (desktop_model_id),
-    cpu_id            BIGINT DEFAULT NULL REFERENCES cpu (cpu_id),
+    desktop_model_id  BIGINT DEFAULT NULL REFERENCES desktop_model (desktop_model_id) ON DELETE SET NULL,
+    cpu_id            BIGINT DEFAULT NULL REFERENCES cpu (cpu_id) ON DELETE SET NULL,
     ram_gb            INTEGER DEFAULT NULL CHECK (ram_gb IS NULL OR ram_gb >= 0),
     ram_type          ram_type_enum DEFAULT NULL,
     storage_gb        INTEGER DEFAULT NULL CHECK (storage_gb IS NULL OR storage_gb >= 0),
     storage_type      storage_type_enum DEFAULT NULL,
-    os_id             BIGINT DEFAULT NULL REFERENCES os (os_id),
-    equipment_user_id BIGINT REFERENCES equipment_user (equipment_user_id),
+    os_id             BIGINT DEFAULT NULL REFERENCES os (os_id) ON DELETE SET NULL,
+    equipment_user_id BIGINT REFERENCES equipment_user (equipment_user_id) ON DELETE SET NULL,
 
     -- Targeta de xarxa wifi addicional: MAC s'apunta quan n'hi ha
     has_wifi_card     BOOLEAN NOT NULL DEFAULT FALSE,
@@ -216,8 +216,8 @@ CREATE TABLE laptop (
     mac_address       TEXT UNIQUE DEFAULT NULL,
 
     -- NULL = igual que laptop_model.base_os_id
-    os_id             BIGINT DEFAULT NULL REFERENCES os (os_id),
-    equipment_user_id BIGINT DEFAULT NULL REFERENCES equipment_user (equipment_user_id)
+    os_id             BIGINT DEFAULT NULL REFERENCES os (os_id) ON DELETE SET NULL,
+    equipment_user_id BIGINT DEFAULT NULL REFERENCES equipment_user (equipment_user_id) ON DELETE SET NULL
 );
 
 CREATE INDEX ON laptop (laptop_model_id);
@@ -299,7 +299,7 @@ CREATE TABLE laptop_student_assignment (
     assignment_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     -- Referencia laptop, no computer, per garantir que només s'assignen portàtils
     computer_id   BIGINT NOT NULL REFERENCES laptop (computer_id) ON DELETE CASCADE,
-    student_id    BIGINT NOT NULL REFERENCES student (student_id),
+    student_id    BIGINT NOT NULL REFERENCES student (student_id) ON DELETE CASCADE,
     -- Snapshot de la classe de l'alumne en aquest any acadèmic
     class_id      BIGINT NOT NULL REFERENCES school_class (class_id),
     academic_year TEXT NOT NULL CHECK (academic_year ~ '^\d{4}-\d{4}$'),
