@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api';
+import { useAuth } from '../App';
 import Combobox from '../components/Combobox';
 
 const TABS = [
@@ -18,6 +19,9 @@ function useConfirmDelete() {
 // Tab 1 — Students CRUD per class
 // ─────────────────────────────────────────────
 function StudentsTab() {
+  const { role } = useAuth();
+  const isTutor  = role === 'tutor';
+
   const [cycles,     setCycles]     = useState([]);
   const [cycleId,    setCycleId]    = useState(null);
   const [classes,    setClasses]    = useState([]);
@@ -32,24 +36,38 @@ function StudentsTab() {
   const [err,        setErr]        = useState('');
   const cd = useConfirmDelete();
 
-  // Load cycles once
+  // Load initial class list
   useEffect(() => {
-    api.listCycles()
-      .then(d => { const list = d ?? []; setCycles(list); if (list.length) setCycleId(list[0].cycle_id); })
-      .catch(() => {});
-  }, []);
+    if (isTutor) {
+      // Tutors only see their assigned classes
+      api.listMyClasses()
+        .then(d => {
+          const list = d ?? [];
+          setClasses(list);
+          setAllClasses(list);
+          if (list.length) setClassId(list[0].class_id);
+        })
+        .catch(() => {});
+    } else {
+      api.listCycles()
+        .then(d => { const list = d ?? []; setCycles(list); if (list.length) setCycleId(list[0].cycle_id); })
+        .catch(() => {});
+    }
+  }, [isTutor]);
 
-  // Load classes when cycle changes
+  // Load classes when cycle changes (admin/editor only)
   useEffect(() => {
+    if (isTutor) return;
     setClassId(null); setClasses([]);
     if (!cycleId) return;
     api.listClassesByCycle(cycleId)
-      .then(d => { const list = d ?? []; setClasses(list); if (list.length) setClassId(list[0].school_class_id); })
+      .then(d => { const list = d ?? []; setClasses(list); if (list.length) setClassId(list[0].class_id); })
       .catch(() => {});
-  }, [cycleId]);
+  }, [cycleId, isTutor]);
 
-  // Load all classes across cycles for the "move" dropdown
+  // Load all classes across cycles for the "move" dropdown (admin/editor only)
   useEffect(() => {
+    if (isTutor) return;
     async function loadAll() {
       const allCycles = await api.listCycles().catch(() => []);
       const nested = await Promise.all(
@@ -62,7 +80,7 @@ function StudentsTab() {
       setAllClasses(nested.flat());
     }
     loadAll();
-  }, []);
+  }, [isTutor]);
 
   const loadStudents = useCallback(() => {
     if (!classId) return;
@@ -94,37 +112,44 @@ function StudentsTab() {
     cd.cancelDelete();
   }
 
-  const selectedClass = classes.find(c => c.school_class_id === classId);
+  const selectedClass = classes.find(c => c.class_id === classId);
   const classOpts = allClasses.map(c => ({
-    value: c.school_class_id,
-    label: `${c.cycleName} — ${c.course}r ${c.class_label} (${SHIFTS_LABEL[c.shift] ?? c.shift})`,
+    value: c.class_id,
+    label: c.cycleName
+      ? `${c.cycleName} — ${c.course}r ${c.class_label} (${SHIFTS_LABEL[c.shift] ?? c.shift})`
+      : `${c.cycle_name ?? ''} — ${c.course}r ${c.class_label} (${SHIFTS_LABEL[c.shift] ?? c.shift})`,
   }));
 
   return (
     <div>
       {/* Filters */}
       <div className="filter-bar">
-        <div className="filter-item">
-          <label>Cicle</label>
-          <select value={cycleId ?? ''} onChange={e => setCycleId(Number(e.target.value))} style={{ width: 160 }}>
-            {cycles.length === 0 && <option value="">— cap cicle —</option>}
-            {cycles.map(c => <option key={c.cycle_id} value={c.cycle_id}>{c.name}</option>)}
-          </select>
-        </div>
+        {!isTutor && (
+          <div className="filter-item">
+            <label>Cicle</label>
+            <select value={cycleId ?? ''} onChange={e => setCycleId(Number(e.target.value))} style={{ width: 160 }}>
+              {cycles.length === 0 && <option value="">— cap cicle —</option>}
+              {cycles.map(c => <option key={c.cycle_id} value={c.cycle_id}>{c.name}</option>)}
+            </select>
+          </div>
+        )}
         <div className="filter-item">
           <label>Classe</label>
           <select value={classId ?? ''} onChange={e => setClassId(Number(e.target.value))} style={{ width: 200 }}>
-            {classes.length === 0 && <option value="">— cap classe —</option>}
+            {classes.length === 0 && <option value="">{isTutor ? '— sense cursos assignats —' : '— cap classe —'}</option>}
             {classes.map(c => (
-              <option key={c.school_class_id} value={c.school_class_id}>
-                {c.course}r {c.class_label} — {SHIFTS_LABEL[c.shift] ?? c.shift}
+              <option key={c.class_id} value={c.class_id}>
+                {isTutor ? `${c.cycle_name ?? ''} · ` : ''}{c.course}r {c.class_label} — {SHIFTS_LABEL[c.shift] ?? c.shift}
               </option>
             ))}
           </select>
         </div>
         {selectedClass && (
           <div className="filter-badge">
-            {cycles.find(c => c.cycle_id === cycleId)?.name} · {selectedClass.course}r {selectedClass.class_label} · {SHIFTS_LABEL[selectedClass.shift] ?? selectedClass.shift} · <strong>{students.length}</strong> alumnes
+            {isTutor
+              ? `${selectedClass.cycle_name ?? ''} · `
+              : `${cycles.find(c => c.cycle_id === cycleId)?.name ?? ''} · `
+            }{selectedClass.course}r {selectedClass.class_label} · {SHIFTS_LABEL[selectedClass.shift] ?? selectedClass.shift} · <strong>{students.length}</strong> alumnes
           </div>
         )}
       </div>
@@ -232,6 +257,9 @@ function StudentsTab() {
 // Tab 2 — Laptop assignments management
 // ─────────────────────────────────────────────
 function AssignmentsTab() {
+  const { role } = useAuth();
+  const isTutor  = role === 'tutor';
+
   const [laptops,       setLaptops]       = useState([]);
   const [laptopId,      setLaptopId]      = useState(null);
   const [assignments,   setAssignments]   = useState([]);
@@ -257,7 +285,7 @@ function AssignmentsTab() {
     return now.getMonth() >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
   }
 
-  // Load laptops, models, all classes + students on mount
+  // Load laptops, models, classes + students on mount
   useEffect(() => {
     async function load() {
       const [lts, lm] = await Promise.all([api.listLaptops(), api.listLaptopModels()]).catch(() => [[], []]);
@@ -265,21 +293,28 @@ function AssignmentsTab() {
       setLaptops(lts ?? []);
       setLmMap(lmMapObj);
 
-      // Load all cycles → classes → students
-      const cycles = await api.listCycles().catch(() => []);
-      const classesNested = await Promise.all(
-        (cycles ?? []).map(c =>
-          api.listClassesByCycle(c.cycle_id)
-            .then(cls => (cls ?? []).map(cl => ({ ...cl, cycleName: c.name })))
-            .catch(() => [])
-        )
-      );
-      const flatClasses = classesNested.flat();
+      let flatClasses;
+      if (isTutor) {
+        // Tutors only see their own classes
+        const myClasses = await api.listMyClasses().catch(() => []);
+        flatClasses = (myClasses ?? []).map(cl => ({ ...cl, cycleName: cl.cycle_name ?? '' }));
+      } else {
+        // Admins/editors see all classes across all cycles
+        const cycles = await api.listCycles().catch(() => []);
+        const classesNested = await Promise.all(
+          (cycles ?? []).map(c =>
+            api.listClassesByCycle(c.cycle_id)
+              .then(cls => (cls ?? []).map(cl => ({ ...cl, cycleName: c.name })))
+              .catch(() => [])
+          )
+        );
+        flatClasses = classesNested.flat();
+      }
       setAllClasses(flatClasses);
 
       const studentsNested = await Promise.all(
         flatClasses.map(cl =>
-          api.listStudentsByClass(cl.school_class_id)
+          api.listStudentsByClass(cl.class_id)
             .then(sts => (sts ?? []).map(s => ({ ...s, className: `${cl.cycleName} ${cl.course}r${cl.class_label}` })))
             .catch(() => [])
         )
@@ -287,7 +322,7 @@ function AssignmentsTab() {
       setAllStudents(studentsNested.flat());
     }
     load();
-  }, []);
+  }, [isTutor]);
 
   const loadAssignments = useCallback(() => {
     if (!laptopId) return;
@@ -341,7 +376,7 @@ function AssignmentsTab() {
   }));
 
   const classOpts = allClasses.map(c => ({
-    value: c.school_class_id,
+    value: c.class_id,
     label: `${c.cycleName} · ${c.course}r ${c.class_label} (${SHIFTS_LABEL[c.shift] ?? c.shift})`,
   }));
 
