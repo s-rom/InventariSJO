@@ -2,22 +2,34 @@
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    d.desktop_model_id, d.cpu_id, d.ram_gb, d.ram_type,
-    d.storage_gb, d.storage_type, d.os_id,
+    d.desktop_model_id,
+    COALESCE(d.cpu_id,        dm.cpu_id)            AS cpu_id,
+    COALESCE(d.ram_gb,        dm.base_ram_gb)        AS ram_gb,
+    COALESCE(d.ram_type,      dm.base_ram_type)      AS ram_type,
+    COALESCE(d.storage_gb,    dm.base_storage_gb)    AS storage_gb,
+    COALESCE(d.storage_type,  dm.base_storage_type)  AS storage_type,
+    COALESCE(d.os_id,         dm.base_os_id)         AS os_id,
     d.equipment_user_id, d.has_wifi_card, d.mac_address
 FROM computer c
 INNER JOIN desktop d ON d.computer_id = c.computer_id
+LEFT JOIN desktop_model dm ON dm.desktop_model_id = d.desktop_model_id
 ORDER BY c.computer_id;
 
 -- name: GetDesktop :one
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    d.desktop_model_id, d.cpu_id, d.ram_gb, d.ram_type,
-    d.storage_gb, d.storage_type, d.os_id,
+    d.desktop_model_id,
+    COALESCE(d.cpu_id,        dm.cpu_id)            AS cpu_id,
+    COALESCE(d.ram_gb,        dm.base_ram_gb)        AS ram_gb,
+    COALESCE(d.ram_type,      dm.base_ram_type)      AS ram_type,
+    COALESCE(d.storage_gb,    dm.base_storage_gb)    AS storage_gb,
+    COALESCE(d.storage_type,  dm.base_storage_type)  AS storage_type,
+    COALESCE(d.os_id,         dm.base_os_id)         AS os_id,
     d.equipment_user_id, d.has_wifi_card, d.mac_address
 FROM computer c
 INNER JOIN desktop d ON d.computer_id = c.computer_id
+LEFT JOIN desktop_model dm ON dm.desktop_model_id = d.desktop_model_id
 WHERE c.computer_id = $1;
 
 -- name: CreateDesktop :one

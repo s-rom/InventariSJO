@@ -2,22 +2,34 @@
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    l.laptop_model_id, l.serial_number, l.ram_gb, l.ram_type,
-    l.storage_gb, l.storage_type, l.mac_address,
-    l.os_id, l.equipment_user_id
+    l.laptop_model_id, l.serial_number,
+    COALESCE(l.ram_gb,       lm.base_ram_gb)       AS ram_gb,
+    COALESCE(l.ram_type,     lm.base_ram_type)     AS ram_type,
+    COALESCE(l.storage_gb,   lm.base_storage_gb)   AS storage_gb,
+    COALESCE(l.storage_type, lm.base_storage_type) AS storage_type,
+    l.mac_address,
+    COALESCE(l.os_id, lm.base_os_id) AS os_id,
+    l.equipment_user_id
 FROM computer c
 INNER JOIN laptop l ON l.computer_id = c.computer_id
+INNER JOIN laptop_model lm ON lm.laptop_model_id = l.laptop_model_id
 ORDER BY c.computer_id;
 
 -- name: GetLaptop :one
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    l.laptop_model_id, l.serial_number, l.ram_gb, l.ram_type,
-    l.storage_gb, l.storage_type, l.mac_address,
-    l.os_id, l.equipment_user_id
+    l.laptop_model_id, l.serial_number,
+    COALESCE(l.ram_gb,       lm.base_ram_gb)       AS ram_gb,
+    COALESCE(l.ram_type,     lm.base_ram_type)     AS ram_type,
+    COALESCE(l.storage_gb,   lm.base_storage_gb)   AS storage_gb,
+    COALESCE(l.storage_type, lm.base_storage_type) AS storage_type,
+    l.mac_address,
+    COALESCE(l.os_id, lm.base_os_id) AS os_id,
+    l.equipment_user_id
 FROM computer c
 INNER JOIN laptop l ON l.computer_id = c.computer_id
+INNER JOIN laptop_model lm ON lm.laptop_model_id = l.laptop_model_id
 WHERE c.computer_id = $1;
 
 -- name: CreateLaptop :one

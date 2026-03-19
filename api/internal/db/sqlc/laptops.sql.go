@@ -71,31 +71,37 @@ const getLaptop = `-- name: GetLaptop :one
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    l.laptop_model_id, l.serial_number, l.ram_gb, l.ram_type,
-    l.storage_gb, l.storage_type, l.mac_address,
-    l.os_id, l.equipment_user_id
+    l.laptop_model_id, l.serial_number,
+    COALESCE(l.ram_gb,       lm.base_ram_gb)       AS ram_gb,
+    COALESCE(l.ram_type,     lm.base_ram_type)     AS ram_type,
+    COALESCE(l.storage_gb,   lm.base_storage_gb)   AS storage_gb,
+    COALESCE(l.storage_type, lm.base_storage_type) AS storage_type,
+    l.mac_address,
+    COALESCE(l.os_id, lm.base_os_id) AS os_id,
+    l.equipment_user_id
 FROM computer c
 INNER JOIN laptop l ON l.computer_id = c.computer_id
+INNER JOIN laptop_model lm ON lm.laptop_model_id = l.laptop_model_id
 WHERE c.computer_id = $1
 `
 
 type GetLaptopRow struct {
-	ComputerID         int64               `json:"computer_id"`
-	Hostname           string              `json:"hostname"`
-	RoomID             pgtype.Int8         `json:"room_id"`
-	Observations       pgtype.Text         `json:"observations"`
-	CreatedByAppUserID int64               `json:"created_by_app_user_id"`
-	CreatedAt          pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz  `json:"updated_at"`
-	LaptopModelID      int64               `json:"laptop_model_id"`
-	SerialNumber       pgtype.Text         `json:"serial_number"`
-	RamGb              pgtype.Int4         `json:"ram_gb"`
-	RamType            NullRamTypeEnum     `json:"ram_type"`
-	StorageGb          pgtype.Int4         `json:"storage_gb"`
-	StorageType        NullStorageTypeEnum `json:"storage_type"`
-	MacAddress         pgtype.Text         `json:"mac_address"`
-	OsID               pgtype.Int8         `json:"os_id"`
-	EquipmentUserID    pgtype.Int8         `json:"equipment_user_id"`
+	ComputerID         int64              `json:"computer_id"`
+	Hostname           string             `json:"hostname"`
+	RoomID             pgtype.Int8        `json:"room_id"`
+	Observations       pgtype.Text        `json:"observations"`
+	CreatedByAppUserID int64              `json:"created_by_app_user_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	LaptopModelID      int64              `json:"laptop_model_id"`
+	SerialNumber       pgtype.Text        `json:"serial_number"`
+	RamGb              int32              `json:"ram_gb"`
+	RamType            RamTypeEnum        `json:"ram_type"`
+	StorageGb          int32              `json:"storage_gb"`
+	StorageType        StorageTypeEnum    `json:"storage_type"`
+	MacAddress         pgtype.Text        `json:"mac_address"`
+	OsID               pgtype.Int8        `json:"os_id"`
+	EquipmentUserID    pgtype.Int8        `json:"equipment_user_id"`
 }
 
 func (q *Queries) GetLaptop(ctx context.Context, computerID int64) (GetLaptopRow, error) {
@@ -126,31 +132,37 @@ const listLaptops = `-- name: ListLaptops :many
 SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
-    l.laptop_model_id, l.serial_number, l.ram_gb, l.ram_type,
-    l.storage_gb, l.storage_type, l.mac_address,
-    l.os_id, l.equipment_user_id
+    l.laptop_model_id, l.serial_number,
+    COALESCE(l.ram_gb,       lm.base_ram_gb)       AS ram_gb,
+    COALESCE(l.ram_type,     lm.base_ram_type)     AS ram_type,
+    COALESCE(l.storage_gb,   lm.base_storage_gb)   AS storage_gb,
+    COALESCE(l.storage_type, lm.base_storage_type) AS storage_type,
+    l.mac_address,
+    COALESCE(l.os_id, lm.base_os_id) AS os_id,
+    l.equipment_user_id
 FROM computer c
 INNER JOIN laptop l ON l.computer_id = c.computer_id
+INNER JOIN laptop_model lm ON lm.laptop_model_id = l.laptop_model_id
 ORDER BY c.computer_id
 `
 
 type ListLaptopsRow struct {
-	ComputerID         int64               `json:"computer_id"`
-	Hostname           string              `json:"hostname"`
-	RoomID             pgtype.Int8         `json:"room_id"`
-	Observations       pgtype.Text         `json:"observations"`
-	CreatedByAppUserID int64               `json:"created_by_app_user_id"`
-	CreatedAt          pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz  `json:"updated_at"`
-	LaptopModelID      int64               `json:"laptop_model_id"`
-	SerialNumber       pgtype.Text         `json:"serial_number"`
-	RamGb              pgtype.Int4         `json:"ram_gb"`
-	RamType            NullRamTypeEnum     `json:"ram_type"`
-	StorageGb          pgtype.Int4         `json:"storage_gb"`
-	StorageType        NullStorageTypeEnum `json:"storage_type"`
-	MacAddress         pgtype.Text         `json:"mac_address"`
-	OsID               pgtype.Int8         `json:"os_id"`
-	EquipmentUserID    pgtype.Int8         `json:"equipment_user_id"`
+	ComputerID         int64              `json:"computer_id"`
+	Hostname           string             `json:"hostname"`
+	RoomID             pgtype.Int8        `json:"room_id"`
+	Observations       pgtype.Text        `json:"observations"`
+	CreatedByAppUserID int64              `json:"created_by_app_user_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+	LaptopModelID      int64              `json:"laptop_model_id"`
+	SerialNumber       pgtype.Text        `json:"serial_number"`
+	RamGb              int32              `json:"ram_gb"`
+	RamType            RamTypeEnum        `json:"ram_type"`
+	StorageGb          int32              `json:"storage_gb"`
+	StorageType        StorageTypeEnum    `json:"storage_type"`
+	MacAddress         pgtype.Text        `json:"mac_address"`
+	OsID               pgtype.Int8        `json:"os_id"`
+	EquipmentUserID    pgtype.Int8        `json:"equipment_user_id"`
 }
 
 func (q *Queries) ListLaptops(ctx context.Context) ([]ListLaptopsRow, error) {
