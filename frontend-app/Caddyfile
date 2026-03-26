@@ -1,6 +1,4 @@
-# Caddy obtiene y renueva certificados Let's Encrypt automáticamente
-# usando el challenge DNS-01 a través de DuckDNS.
-# No necesita puertos 80/443 abiertos en el router para emitir certificados.
+# TLS via DNS-01 challenge (DuckDNS) - no open ports needed on router
 
 {
     email {$ACME_EMAIL}
@@ -11,19 +9,19 @@
         dns duckdns {$DUCKDNS_TOKEN}
     }
 
-    # Proxy al backend Go — Caddy añade las cabeceras estándar
+    # Proxy to Go backend
     reverse_proxy /api/* api:8080 {
-        header_up X-Forwarded-Proto {scheme}
-        header_up X-Real-IP       {remote_host}
-        header_up X-Forwarded-For {remote_host}
+        header_up X-Forwarded-Proto {http.request.scheme}
+        header_up X-Real-IP         {http.request.remote.host}
+        header_up X-Forwarded-For   {http.request.remote.host}
     }
 
-    # Sirve el SPA — rutas desconocidas devuelven index.html
+    # SPA fallback
     root * /srv
     try_files {path} /index.html
     file_server
 
-    # Cabeceras de seguridad
+    # Security headers
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options    "nosniff"
