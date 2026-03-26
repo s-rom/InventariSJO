@@ -1,0 +1,29 @@
+# Caddy obtiene y renueva certificados Let's Encrypt automáticamente.
+# No hay que tocar nada más una vez configurado.
+
+{
+    # Email para notificaciones de Let's Encrypt (caducidad, problemas)
+    email {env.ACME_EMAIL}
+}
+
+{env.DOMAIN} {
+    # Proxy al backend Go — Caddy añade las cabeceras estándar
+    reverse_proxy /api/* api:8080 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP       {remote_host}
+        header_up X-Forwarded-For {remote_host}
+    }
+
+    # Sirve el SPA — rutas desconocidas devuelven index.html
+    root * /srv
+    try_files {path} /index.html
+    file_server
+
+    # Cabeceras de seguridad
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options    "nosniff"
+        X-Frame-Options           "SAMEORIGIN"
+        Referrer-Policy           "strict-origin-when-cross-origin"
+    }
+}
