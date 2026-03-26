@@ -27,7 +27,9 @@ services:
       - app
 
   certbot:
-    image: infinityofspace/certbot-dns-duckdns:latest
+    build:
+      context: ./certbot
+      dockerfile: Dockerfile
     volumes:
       - certbot_certs:/etc/letsencrypt
       - ./certbot/renew.sh:/renew.sh:ro
