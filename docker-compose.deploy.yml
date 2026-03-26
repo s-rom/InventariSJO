@@ -51,6 +51,7 @@ services:
       - DOMAIN=${DOMAIN}
       - ACME_EMAIL=${ACME_EMAIL}
       - DUCKDNS_TOKEN=${DUCKDNS_TOKEN}
+      - LOCAL_IP=${LOCAL_IP}
     depends_on:
       - api
     restart: unless-stopped

@@ -7,24 +7,37 @@
     acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
 }
 
-{$DOMAIN} {
-    tls {
-        dns duckdns {$DUCKDNS_TOKEN}
-    }
+# Acceso por IP local desde la red del colegio (cert autofirmado automatico)
+https://{$LOCAL_IP} {
+    tls internal
 
-    # Proxy to Go backend
     reverse_proxy /api/* api:8080 {
         header_up X-Forwarded-Proto {http.request.scheme}
         header_up X-Real-IP         {http.request.remote.host}
         header_up X-Forwarded-For   {http.request.remote.host}
     }
 
-    # SPA fallback
+    root * /srv
+    try_files {path} /index.html
+    file_server
+}
+
+# Acceso por dominio DuckDNS (cert Let's Encrypt)
+{$DOMAIN} {
+    tls {
+        dns duckdns {$DUCKDNS_TOKEN}
+    }
+
+    reverse_proxy /api/* api:8080 {
+        header_up X-Forwarded-Proto {http.request.scheme}
+        header_up X-Real-IP         {http.request.remote.host}
+        header_up X-Forwarded-For   {http.request.remote.host}
+    }
+
     root * /srv
     try_files {path} /index.html
     file_server
 
-    # Security headers
     header {
         Strict-Transport-Security "max-age=31536000; includeSubDomains"
         X-Content-Type-Options    "nosniff"
