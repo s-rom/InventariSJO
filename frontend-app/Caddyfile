@@ -7,7 +7,9 @@
     local_certs
 }
 
-:443 {
+https://:443 {
+    tls internal
+
     reverse_proxy /api/* api:8080 {
         header_up X-Forwarded-Proto {http.request.scheme}
         header_up X-Real-IP         {http.request.remote.host}
