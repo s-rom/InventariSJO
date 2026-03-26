@@ -7,8 +7,8 @@
     acme_ca https://acme-staging-v02.api.letsencrypt.org/directory
 }
 
-# Acceso por IP local desde la red del colegio (cert autofirmado automatico)
-https://{$LOCAL_IP} {
+# Catch-all: acceso por IP local desde la red del colegio (cert interno autofirmado)
+:443 {
     tls internal
 
     reverse_proxy /api/* api:8080 {
@@ -22,7 +22,7 @@ https://{$LOCAL_IP} {
     file_server
 }
 
-# Acceso por dominio DuckDNS (cert Let's Encrypt)
+# Acceso por dominio DuckDNS (cert Let's Encrypt staging)
 {$DOMAIN} {
     tls {
         dns duckdns {$DUCKDNS_TOKEN}
