@@ -6,8 +6,14 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-# Etapa 2: Caddy sirve los estáticos y gestiona TLS automáticamente
+# Etapa 2: compilar Caddy con el plugin DNS de DuckDNS
+# Necesario para el challenge DNS-01 (no requiere puertos 80/443 abiertos en el router)
+FROM caddy:2-builder AS caddy-builder
+RUN xcaddy build --with github.com/caddy-dns/duckdns
+
+# Etapa 3: imagen final
 FROM caddy:2-alpine
+COPY --from=caddy-builder /usr/bin/caddy /usr/bin/caddy
 COPY --from=builder /app/dist /srv
 COPY Caddyfile /etc/caddy/Caddyfile
 EXPOSE 80 443

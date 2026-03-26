@@ -1,12 +1,16 @@
-# Caddy obtiene y renueva certificados Let's Encrypt automáticamente.
-# No hay que tocar nada más una vez configurado.
+# Caddy obtiene y renueva certificados Let's Encrypt automáticamente
+# usando el challenge DNS-01 a través de DuckDNS.
+# No necesita puertos 80/443 abiertos en el router para emitir certificados.
 
 {
-    # Email para notificaciones de Let's Encrypt (caducidad, problemas)
-    email {env.ACME_EMAIL}
+    email {$ACME_EMAIL}
 }
 
-{env.DOMAIN} {
+{$DOMAIN} {
+    tls {
+        dns duckdns {$DUCKDNS_TOKEN}
+    }
+
     # Proxy al backend Go — Caddy añade las cabeceras estándar
     reverse_proxy /api/* api:8080 {
         header_up X-Forwarded-Proto {scheme}
