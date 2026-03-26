@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../App';
+import EditComputerModal from '../components/EditComputerModal';
 
 function osEmoji(name = '') {
   const n = (name ?? '').toLowerCase();
@@ -38,6 +39,7 @@ export default function Computers() {
   const [loading,        setLoading]        = useState(true);
   const [err,            setErr]            = useState('');
   const [query,          setQuery]          = useState('');
+  const [editItem,       setEditItem]       = useState(null); // { item, type }
 
   useEffect(() => {
     async function load() {
@@ -70,7 +72,14 @@ export default function Computers() {
         const lmMap       = Object.fromEntries((lm ?? []).map(m => [m.laptop_model_id,  `${m.brand_name} ${m.model_name}`]));
         const dmMap       = Object.fromEntries((dm ?? []).map(m => [m.desktop_model_id, `${m.brand_name} ${m.model_name}`]));
 
-        setRefs({ cpuMap, osMap, equipMap, roomMap, lmMap, dmMap });
+        const cpuOpts   = (cpus   ?? []).map(c => ({ value: c.cpu_id,              label: c.model_name }));
+        const osOpts    = (osList ?? []).map(o => ({ value: o.os_id,               label: o.name }));
+        const equipOpts = (equip  ?? []).map(e => ({ value: e.equipment_user_id,   label: e.name }));
+        const roomOpts  = allRooms.map(r => ({ value: r.room_id, label: `${r.centerName} › ${r.name}` }));
+        const lmOpts    = (lm     ?? []).map(m => ({ value: m.laptop_model_id,     label: `${m.brand_name} ${m.model_name}` }));
+        const dmOpts    = (dm     ?? []).map(m => ({ value: m.desktop_model_id,    label: `${m.brand_name} ${m.model_name}` }));
+
+        setRefs({ cpuMap, osMap, equipMap, roomMap, lmMap, dmMap, cpuOpts, osOpts, equipOpts, roomOpts, lmOpts, dmOpts });
         setDesktops(dt ?? []);
         setLaptops(lt ?? []);
       } catch (e) {
@@ -133,6 +142,15 @@ export default function Computers() {
     }
   }
 
+  function handleEditSave(updated, type) {
+    if (type === 'desktop') {
+      setDesktops(prev => prev.map(d => d.computer_id === updated.computer_id ? updated : d));
+    } else {
+      setLaptops(prev => prev.map(l => l.computer_id === updated.computer_id ? updated : l));
+    }
+    setEditItem(null);
+  }
+
   return (
     <>
       {/* SEARCH BAR */}
@@ -177,6 +195,7 @@ export default function Computers() {
                   <th>WiFi</th>
                   <th>MAC</th>
                   <th>Usuari equip</th>
+                  <th>Observacions</th>
                   {canEdit && <th></th>}
                 </tr>
               </thead>
@@ -193,11 +212,17 @@ export default function Computers() {
                     <td style={{ textAlign: 'center' }}>{d.has_wifi_card ? '✔' : '—'}</td>
                     <td><code style={{ fontSize: 11 }}>{d.mac_address ?? '—'}</code></td>
                     <td>{d.equipment_user_id ? R.equipMap[d.equipment_user_id] ?? '—' : '—'}</td>
+                    <td style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.observations ?? '—'}</td>
                     {canEdit && (
                       <td>
-                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d.computer_id, d.hostname)}>
-                          Eliminar
-                        </button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-sm" onClick={() => setEditItem({ item: d, type: 'desktop' })}>
+                            Editar
+                          </button>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d.computer_id, d.hostname)}>
+                            Eliminar
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -232,6 +257,7 @@ export default function Computers() {
                   <th>Emmagatzematge</th>
                   <th>MAC</th>
                   <th>Usuari equip</th>
+                  <th>Observacions</th>
                   {canEdit && <th></th>}
                 </tr>
               </thead>
@@ -246,11 +272,17 @@ export default function Computers() {
                     <td>{storageLabel(l.storage_gb, l.storage_type)}</td>
                     <td><code style={{ fontSize: 11 }}>{l.mac_address ?? '—'}</code></td>
                     <td>{l.equipment_user_id ? R.equipMap[l.equipment_user_id] ?? '—' : '—'}</td>
+                    <td style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.observations ?? '—'}</td>
                     {canEdit && (
                       <td>
-                        <button className="btn btn-danger btn-sm" onClick={() => handleDelete(l.computer_id, l.hostname)}>
-                          Eliminar
-                        </button>
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button className="btn btn-sm" onClick={() => setEditItem({ item: l, type: 'laptop' })}>
+                            Editar
+                          </button>
+                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(l.computer_id, l.hostname)}>
+                            Eliminar
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -260,6 +292,17 @@ export default function Computers() {
           </div>
         )}
       </div>
+
+      {/* EDIT MODAL */}
+      {editItem && (
+        <EditComputerModal
+          item={editItem.item}
+          type={editItem.type}
+          refs={R}
+          onSave={updated => handleEditSave(updated, editItem.type)}
+          onClose={() => setEditItem(null)}
+        />
+      )}
     </>
   );
 }

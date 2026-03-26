@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import Combobox from '../components/Combobox';
+import MiniList from '../components/MiniList';
 
 const RAM_TYPES     = ['DDR3', 'DDR4', 'DDR5', 'None'];
 const STORAGE_TYPES = ['HDD', 'SSD', 'NVMe', 'None'];
@@ -27,18 +28,27 @@ export default function NewLaptop() {
   const [form,    setForm]    = useState(EMPTY);
   const [refs,    setRefs]    = useState(null);
   const [modelMap, setModelMap] = useState({});  // id -> full model object
+  const [laptops, setLaptops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [err,     setErr]     = useState('');
+  const [toast,   setToast]   = useState(null); // { type: 'ok'|'err', msg }
+  const toastTimer = useRef(null);
+
+  function showToast(type, msg) {
+    setToast({ type, msg });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     async function load() {
       try {
-        const [osList, equip, centers, lm] = await Promise.all([
+        const [osList, equip, centers, lm, lt] = await Promise.all([
           api.listOS(),
           api.listEquipmentUsers(),
           api.listCenters(),
           api.listLaptopModels(),
+          api.listLaptops(),
         ]);
 
         const roomsNested = await Promise.all(
@@ -50,7 +60,10 @@ export default function NewLaptop() {
         );
         const allRooms = roomsNested.flat();
 
-        const osMap = Object.fromEntries((osList ?? []).map(o => [o.os_id, o.name]));
+        const osOpts   = (osList ?? []).map(o => ({ value: o.os_id,             label: o.name }));
+        const roomOpts = allRooms.map(r => ({ value: r.room_id, label: `${r.centerName} › ${r.name}` }));
+        const osMap    = Object.fromEntries(osOpts.map(o  => [o.value, o.label]));
+        const roomMap  = Object.fromEntries(roomOpts.map(o => [o.value, o.label]));
 
         const lmModels = lm ?? [];
         const lmOpts   = lmModels.map(m => ({
@@ -58,17 +71,21 @@ export default function NewLaptop() {
           label: `${m.brand_name} ${m.model_name}`,
         }));
         const lmMapObj = Object.fromEntries(lmModels.map(m => [m.laptop_model_id, m]));
+        const lmMap    = Object.fromEntries(lmOpts.map(o => [o.value, o.label]));
 
         setModelMap(lmMapObj);
         setRefs({
-          osOpts:    (osList ?? []).map(o => ({ value: o.os_id,             label: o.name })),
+          osOpts,
           equipOpts: (equip  ?? []).map(e => ({ value: e.equipment_user_id, label: e.name })),
-          roomOpts:  allRooms.map(r => ({ value: r.room_id, label: `${r.centerName} › ${r.name}` })),
+          roomOpts,
           lmOpts,
           osMap,
+          roomMap,
+          lmMap,
         });
+        setLaptops(lt ?? []);
       } catch (e) {
-        setErr(e.message);
+        showToast('err', e.message);
       } finally {
         setLoading(false);
       }
@@ -83,7 +100,6 @@ export default function NewLaptop() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setErr('');
     setSaving(true);
     try {
       const body = {
@@ -100,10 +116,12 @@ export default function NewLaptop() {
         equipment_user_id: form.equipment_user_id || null,
         observations:      form.observations      || null,
       };
-      await api.createLaptop(body);
-      navigate('/computers');
+      const created = await api.createLaptop(body);
+      setLaptops(prev => [created, ...prev]);
+      setForm(EMPTY);
+      showToast('ok', `Portàtil “${body.hostname}” afegit correctament.`);
     } catch (e) {
-      setErr(e.message);
+      showToast('err', e.message);
     } finally {
       setSaving(false);
     }
@@ -117,7 +135,20 @@ export default function NewLaptop() {
     <>
       <div className="page-header">
         <h1 className="page-title">💻 Nou portàtil</h1>
+        <button className="btn" onClick={() => navigate('/computers')}>← Tornar</button>
       </div>
+
+      {/* TOAST */}
+      {toast && (
+        <div style={{
+          marginBottom: 16, padding: '10px 16px', borderRadius: 6, fontSize: 14,
+          background: toast.type === 'ok' ? 'rgba(34,197,94,0.1)' : 'rgba(220,50,50,0.08)',
+          color:      toast.type === 'ok' ? '#16a34a'              : 'var(--danger)',
+          border:     `1px solid ${toast.type === 'ok' ? 'rgba(34,197,94,0.3)' : 'rgba(220,50,50,0.2)'}`,
+        }}>
+          {toast.type === 'ok' ? '✔️ ' : '⚠️ '}{toast.msg}
+        </div>
+      )}
 
       <div className="card">
         <form onSubmit={handleSubmit} className="form-panel">
@@ -275,21 +306,24 @@ export default function NewLaptop() {
 
           </div>
 
-          {err && <div className="error-msg" style={{ marginTop: 12 }}>{err}</div>}
-
           <div className="form-actions">
             <button
               type="submit"
               className="btn btn-primary"
               disabled={saving || !form.hostname || !form.room_id || !form.laptop_model_id}
             >
-              {saving ? 'Guardant…' : 'Crear portàtil'}
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => navigate('/computers')}>
-              Cancel·lar
+              {saving ? 'Guardant…' : 'Afegir portàtil'}
             </button>
           </div>
         </form>
+      </div>
+
+      {/* PREVIEW LIST */}
+      <div className="page-header" style={{ marginTop: 40 }}>
+        <h2 className="page-title" style={{ fontSize: 18 }}>💻 Portàtils registrats ({laptops.length})</h2>
+      </div>
+      <div className="card">
+        <MiniList items={laptops} type="laptop" refs={R} />
       </div>
     </>
   );

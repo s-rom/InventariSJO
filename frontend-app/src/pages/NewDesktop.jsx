@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import Combobox from '../components/Combobox';
+import MiniList from '../components/MiniList';
 
 const RAM_TYPES     = ['DDR3', 'DDR4', 'DDR5', 'None'];
 const STORAGE_TYPES = ['HDD', 'SSD', 'NVMe', 'None'];
@@ -26,19 +27,28 @@ export default function NewDesktop() {
   const navigate = useNavigate();
   const [form, setForm]     = useState(EMPTY);
   const [refs, setRefs]     = useState(null);
+  const [desktops, setDesktops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving,  setSaving]  = useState(false);
-  const [err,     setErr]     = useState('');
+  const [toast,   setToast]   = useState(null); // { type: 'ok'|'err', msg }
+  const toastTimer = useRef(null);
+
+  function showToast(type, msg) {
+    setToast({ type, msg });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 4000);
+  }
 
   useEffect(() => {
     async function load() {
       try {
-        const [cpus, osList, equip, centers, dm] = await Promise.all([
+        const [cpus, osList, equip, centers, dm, dt] = await Promise.all([
           api.listCpus(),
           api.listOS(),
           api.listEquipmentUsers(),
           api.listCenters(),
           api.listDesktopModels(),
+          api.listDesktops(),
         ]);
 
         const roomsNested = await Promise.all(
@@ -50,15 +60,21 @@ export default function NewDesktop() {
         );
         const allRooms = roomsNested.flat();
 
-        setRefs({
-          cpuOpts:   (cpus   ?? []).map(c => ({ value: c.cpu_id,               label: c.model_name })),
-          osOpts:    (osList ?? []).map(o => ({ value: o.os_id,                label: o.name })),
-          equipOpts: (equip  ?? []).map(e => ({ value: e.equipment_user_id,    label: e.name })),
-          roomOpts:  allRooms.map(r => ({ value: r.room_id, label: `${r.centerName} › ${r.name}` })),
-          dmOpts:    (dm     ?? []).map(m => ({ value: m.desktop_model_id,     label: `${m.brand_name} ${m.model_name}` })),
-        });
+        const cpuOpts   = (cpus   ?? []).map(c => ({ value: c.cpu_id,               label: c.model_name }));
+        const osOpts    = (osList ?? []).map(o => ({ value: o.os_id,                label: o.name }));
+        const equipOpts = (equip  ?? []).map(e => ({ value: e.equipment_user_id,    label: e.name }));
+        const roomOpts  = allRooms.map(r => ({ value: r.room_id, label: `${r.centerName} › ${r.name}` }));
+        const dmOpts    = (dm     ?? []).map(m => ({ value: m.desktop_model_id,     label: `${m.brand_name} ${m.model_name}` }));
+
+        const cpuMap   = Object.fromEntries(cpuOpts.map(o => [o.value, o.label]));
+        const osMap    = Object.fromEntries(osOpts.map(o  => [o.value, o.label]));
+        const roomMap  = Object.fromEntries(roomOpts.map(o => [o.value, o.label]));
+        const dmMap    = Object.fromEntries(dmOpts.map(o => [o.value, o.label]));
+
+        setRefs({ cpuOpts, osOpts, equipOpts, roomOpts, dmOpts, cpuMap, osMap, roomMap, dmMap });
+        setDesktops(dt ?? []);
       } catch (e) {
-        setErr(e.message);
+        showToast('err', e.message);
       } finally {
         setLoading(false);
       }
@@ -70,7 +86,6 @@ export default function NewDesktop() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setErr('');
     setSaving(true);
     try {
       const body = {
@@ -88,10 +103,12 @@ export default function NewDesktop() {
         equipment_user_id: form.equipment_user_id || null,
         observations:      form.observations || null,
       };
-      await api.createDesktop(body);
-      navigate('/computers');
+      const created = await api.createDesktop(body);
+      setDesktops(prev => [created, ...prev]);
+      setForm(EMPTY);
+      showToast('ok', `Sobretaula “${body.hostname}” afegit correctament.`);
     } catch (e) {
-      setErr(e.message);
+      showToast('err', e.message);
     } finally {
       setSaving(false);
     }
@@ -105,7 +122,20 @@ export default function NewDesktop() {
     <>
       <div className="page-header">
         <h1 className="page-title">🖥️ Nou sobretaula</h1>
+        <button className="btn" onClick={() => navigate('/computers')}>← Tornar</button>
       </div>
+
+      {/* TOAST */}
+      {toast && (
+        <div style={{
+          marginBottom: 16, padding: '10px 16px', borderRadius: 6, fontSize: 14,
+          background: toast.type === 'ok' ? 'rgba(34,197,94,0.1)' : 'rgba(220,50,50,0.08)',
+          color:      toast.type === 'ok' ? '#16a34a'              : 'var(--danger)',
+          border:     `1px solid ${toast.type === 'ok' ? 'rgba(34,197,94,0.3)' : 'rgba(220,50,50,0.2)'}`,
+        }}>
+          {toast.type === 'ok' ? '✔️ ' : '⚠️ '}{toast.msg}
+        </div>
+      )}
 
       <div className="card">
         <form onSubmit={handleSubmit} className="form-panel">
@@ -259,17 +289,20 @@ export default function NewDesktop() {
 
           </div>
 
-          {err && <div className="error-msg" style={{ marginTop: 12 }}>{err}</div>}
-
           <div className="form-actions">
             <button type="submit" className="btn btn-primary" disabled={saving || !form.hostname || !form.room_id}>
-              {saving ? 'Guardant…' : 'Crear sobretaula'}
-            </button>
-            <button type="button" className="btn btn-ghost" onClick={() => navigate('/computers')}>
-              Cancel·lar
+              {saving ? 'Guardant…' : 'Afegir sobretaula'}
             </button>
           </div>
         </form>
+      </div>
+
+      {/* PREVIEW LIST */}
+      <div className="page-header" style={{ marginTop: 40 }}>
+        <h2 className="page-title" style={{ fontSize: 18 }}>🖥️ Sobretaules registrats ({desktops.length})</h2>
+      </div>
+      <div className="card">
+        <MiniList items={desktops} type="desktop" refs={R} />
       </div>
     </>
   );

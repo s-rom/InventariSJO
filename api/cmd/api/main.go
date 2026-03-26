@@ -8,8 +8,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"inventari/api/internal/server"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func main() {
