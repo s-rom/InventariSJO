@@ -1,4 +1,18 @@
 import { useState, useEffect } from 'react';
+
+// Utilidad para ordenar arrays de objetos por clave
+function sortBy(arr, key, asc = true) {
+  return [...arr].sort((a, b) => {
+    const v1 = typeof key === 'function' ? key(a) : a[key];
+    const v2 = typeof key === 'function' ? key(b) : b[key];
+    if (v1 == null && v2 == null) return 0;
+    if (v1 == null) return 1;
+    if (v2 == null) return -1;
+    if (v1 < v2) return asc ? -1 : 1;
+    if (v1 > v2) return asc ? 1 : -1;
+    return 0;
+  });
+}
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../App';
@@ -40,6 +54,11 @@ export default function Computers() {
   const [err,            setErr]            = useState('');
   const [query,          setQuery]          = useState('');
   const [editItem,       setEditItem]       = useState(null); // { item, type }
+  // Ordenado y paginación
+  const [sortCol, setSortCol] = useState('hostname');
+  const [sortAsc, setSortAsc] = useState(true);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
 
   useEffect(() => {
     async function load() {
@@ -97,6 +116,7 @@ export default function Computers() {
   const R = refs;
 
   const q = query.trim().toLowerCase();
+
   const filteredDesktops = q
     ? desktops.filter(d => [
         d.hostname,
@@ -114,6 +134,27 @@ export default function Computers() {
       ].filter(Boolean).join(' ').toLowerCase().includes(q))
     : desktops;
 
+  // Ordenar
+  const sortKeyMap = {
+    hostname: d => d.hostname?.toLowerCase() ?? '',
+    aula: d => R.roomMap[d.room_id]?.toLowerCase() ?? '',
+    model: d => d.desktop_model_id ? R.dmMap[d.desktop_model_id]?.toLowerCase() : '',
+    cpu: d => d.cpu_id ? R.cpuMap[d.cpu_id]?.toLowerCase() : '',
+    so: d => R.osMap[d.os_id]?.toLowerCase() ?? '',
+    ram: d => d.ram_gb ?? 0,
+    storage: d => d.storage_gb ?? 0,
+    wifi: d => d.has_wifi_card ? 1 : 0,
+    mac: d => d.mac_address?.toLowerCase() ?? '',
+    user: d => d.equipment_user_id ? R.equipMap[d.equipment_user_id]?.toLowerCase() : '',
+    obs: d => d.observations?.toLowerCase() ?? '',
+  };
+  const sortedDesktops = sortBy(filteredDesktops, sortKeyMap[sortCol] || sortKeyMap.hostname, sortAsc);
+  // Paginado
+  const totalPages = Math.ceil(sortedDesktops.length / PAGE_SIZE) || 1;
+  const pagedDesktops = sortedDesktops.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+
+  // Laptops: filtrado, orden y paginación
   const filteredLaptops = q
     ? laptops.filter(l => [
         l.hostname,
@@ -130,6 +171,21 @@ export default function Computers() {
         l.observations,
       ].filter(Boolean).join(' ').toLowerCase().includes(q))
     : laptops;
+
+  const laptopSortKeyMap = {
+    hostname: l => l.hostname?.toLowerCase() ?? '',
+    aula: l => R.roomMap[l.room_id]?.toLowerCase() ?? '',
+    model: l => l.laptop_model_id ? R.lmMap[l.laptop_model_id]?.toLowerCase() : '',
+    so: l => R.osMap[l.os_id]?.toLowerCase() ?? '',
+    ram: l => l.ram_gb ?? 0,
+    storage: l => l.storage_gb ?? 0,
+    mac: l => l.mac_address?.toLowerCase() ?? '',
+    user: l => l.equipment_user_id ? R.equipMap[l.equipment_user_id]?.toLowerCase() : '',
+    obs: l => l.observations?.toLowerCase() ?? '',
+  };
+  const sortedLaptops = sortBy(filteredLaptops, laptopSortKeyMap[sortCol] || laptopSortKeyMap.hostname, sortAsc);
+  const totalLaptopPages = Math.ceil(sortedLaptops.length / PAGE_SIZE) || 1;
+  const pagedLaptops = sortedLaptops.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   async function handleDelete(id, hostname) {
     if (!confirm(`Eliminar l'equip "${hostname}"?`)) return;
@@ -181,55 +237,85 @@ export default function Computers() {
         {filteredDesktops.length === 0 ? (
           <div className="empty">{q ? 'Cap resultat.' : 'Cap sobretaula registrat.'}</div>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Hostname</th>
-                  <th>Aula</th>
-                  <th>Model base</th>
-                  <th>CPU</th>
-                  <th>SO</th>
-                  <th>RAM</th>
-                  <th>Emmagatzematge</th>
-                  <th>WiFi</th>
-                  <th>MAC</th>
-                  <th>Usuari equip</th>
-                  <th>Observacions</th>
-                  {canEdit && <th></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredDesktops.map(d => (
-                  <tr key={d.computer_id}>
-                    <td><strong>{d.hostname}</strong></td>
-                    <td>{R.roomMap[d.room_id] ?? '—'}</td>
-                    <td>{d.desktop_model_id ? R.dmMap[d.desktop_model_id] ?? '—' : <span style={{ color: 'var(--muted)' }}>sense model</span>}</td>
-                    <td>{d.cpu_id ? R.cpuMap[d.cpu_id] ?? '—' : '—'}</td>
-                    <td>{osEmoji(R.osMap[d.os_id])}</td>
-                    <td>{ramLabel(d.ram_gb, d.ram_type)}</td>
-                    <td>{storageLabel(d.storage_gb, d.storage_type)}</td>
-                    <td style={{ textAlign: 'center' }}>{d.has_wifi_card ? '✔' : '—'}</td>
-                    <td><code style={{ fontSize: 11 }}>{d.mac_address ?? '—'}</code></td>
-                    <td>{d.equipment_user_id ? R.equipMap[d.equipment_user_id] ?? '—' : '—'}</td>
-                    <td style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.observations ?? '—'}</td>
-                    {canEdit && (
-                      <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn btn-sm" onClick={() => setEditItem({ item: d, type: 'desktop' })}>
-                            Editar
-                          </button>
-                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d.computer_id, d.hostname)}>
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    )}
+          <>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('hostname'); setSortAsc(sortCol === 'hostname' ? !sortAsc : true); }}>
+                      Hostname {sortCol === 'hostname' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('aula'); setSortAsc(sortCol === 'aula' ? !sortAsc : true); }}>
+                      Aula {sortCol === 'aula' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('model'); setSortAsc(sortCol === 'model' ? !sortAsc : true); }}>
+                      Model base {sortCol === 'model' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('cpu'); setSortAsc(sortCol === 'cpu' ? !sortAsc : true); }}>
+                      CPU {sortCol === 'cpu' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('so'); setSortAsc(sortCol === 'so' ? !sortAsc : true); }}>
+                      SO {sortCol === 'so' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('ram'); setSortAsc(sortCol === 'ram' ? !sortAsc : true); }}>
+                      RAM {sortCol === 'ram' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('storage'); setSortAsc(sortCol === 'storage' ? !sortAsc : true); }}>
+                      Emmagatzematge {sortCol === 'storage' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('wifi'); setSortAsc(sortCol === 'wifi' ? !sortAsc : true); }}>
+                      WiFi {sortCol === 'wifi' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('mac'); setSortAsc(sortCol === 'mac' ? !sortAsc : true); }}>
+                      MAC {sortCol === 'mac' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('user'); setSortAsc(sortCol === 'user' ? !sortAsc : true); }}>
+                      Usuari equip {sortCol === 'user' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('obs'); setSortAsc(sortCol === 'obs' ? !sortAsc : true); }}>
+                      Observacions {sortCol === 'obs' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    {canEdit && <th></th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pagedDesktops.map(d => (
+                    <tr key={d.computer_id}>
+                      <td><strong>{d.hostname}</strong></td>
+                      <td>{R.roomMap[d.room_id] ?? '—'}</td>
+                      <td>{d.desktop_model_id ? R.dmMap[d.desktop_model_id] ?? '—' : <span style={{ color: 'var(--muted)' }}>sense model</span>}</td>
+                      <td>{d.cpu_id ? R.cpuMap[d.cpu_id] ?? '—' : '—'}</td>
+                      <td>{osEmoji(R.osMap[d.os_id])}</td>
+                      <td>{ramLabel(d.ram_gb, d.ram_type)}</td>
+                      <td>{storageLabel(d.storage_gb, d.storage_type)}</td>
+                      <td style={{ textAlign: 'center' }}>{d.has_wifi_card ? '✔' : '—'}</td>
+                      <td><code style={{ fontSize: 11 }}>{d.mac_address ?? '—'}</code></td>
+                      <td>{d.equipment_user_id ? R.equipMap[d.equipment_user_id] ?? '—' : '—'}</td>
+                      <td style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.observations ?? '—'}</td>
+                      {canEdit && (
+                        <td>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className="btn btn-sm" onClick={() => setEditItem({ item: d, type: 'desktop' })}>
+                              Editar
+                            </button>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d.computer_id, d.hostname)}>
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Paginación */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 12 }}>
+              <button className="btn btn-sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Anterior</button>
+              <span>Pàgina {page} de {totalPages}</span>
+              <button className="btn btn-sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}>Següent</button>
+            </div>
+          </>
         )}
       </div>
 
@@ -245,51 +331,77 @@ export default function Computers() {
         {filteredLaptops.length === 0 ? (
           <div className="empty">{q ? 'Cap resultat.' : 'Cap portàtil registrat.'}</div>
         ) : (
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Hostname</th>
-                  <th>Aula</th>
-                  <th>Model</th>
-                  <th>SO</th>
-                  <th>RAM</th>
-                  <th>Emmagatzematge</th>
-                  <th>MAC</th>
-                  <th>Usuari equip</th>
-                  <th>Observacions</th>
-                  {canEdit && <th></th>}
-                </tr>
-              </thead>
-              <tbody>
-                {filteredLaptops.map(l => (
-                  <tr key={l.computer_id}>
-                    <td><strong>{l.hostname}</strong></td>
-                    <td>{R.roomMap[l.room_id] ?? '—'}</td>
-                    <td>{l.laptop_model_id ? R.lmMap[l.laptop_model_id] ?? '—' : '—'}</td>
-                    <td>{osEmoji(R.osMap[l.os_id])}</td>
-                    <td>{ramLabel(l.ram_gb, l.ram_type)}</td>
-                    <td>{storageLabel(l.storage_gb, l.storage_type)}</td>
-                    <td><code style={{ fontSize: 11 }}>{l.mac_address ?? '—'}</code></td>
-                    <td>{l.equipment_user_id ? R.equipMap[l.equipment_user_id] ?? '—' : '—'}</td>
-                    <td style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.observations ?? '—'}</td>
-                    {canEdit && (
-                      <td>
-                        <div style={{ display: 'flex', gap: 6 }}>
-                          <button className="btn btn-sm" onClick={() => setEditItem({ item: l, type: 'laptop' })}>
-                            Editar
-                          </button>
-                          <button className="btn btn-danger btn-sm" onClick={() => handleDelete(l.computer_id, l.hostname)}>
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    )}
+          <>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('hostname'); setSortAsc(sortCol === 'hostname' ? !sortAsc : true); }}>
+                      Hostname {sortCol === 'hostname' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('aula'); setSortAsc(sortCol === 'aula' ? !sortAsc : true); }}>
+                      Aula {sortCol === 'aula' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('model'); setSortAsc(sortCol === 'model' ? !sortAsc : true); }}>
+                      Model {sortCol === 'model' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('so'); setSortAsc(sortCol === 'so' ? !sortAsc : true); }}>
+                      SO {sortCol === 'so' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('ram'); setSortAsc(sortCol === 'ram' ? !sortAsc : true); }}>
+                      RAM {sortCol === 'ram' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('storage'); setSortAsc(sortCol === 'storage' ? !sortAsc : true); }}>
+                      Emmagatzematge {sortCol === 'storage' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('mac'); setSortAsc(sortCol === 'mac' ? !sortAsc : true); }}>
+                      MAC {sortCol === 'mac' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('user'); setSortAsc(sortCol === 'user' ? !sortAsc : true); }}>
+                      Usuari equip {sortCol === 'user' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('obs'); setSortAsc(sortCol === 'obs' ? !sortAsc : true); }}>
+                      Observacions {sortCol === 'obs' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    {canEdit && <th></th>}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {pagedLaptops.map(l => (
+                    <tr key={l.computer_id}>
+                      <td><strong>{l.hostname}</strong></td>
+                      <td>{R.roomMap[l.room_id] ?? '—'}</td>
+                      <td>{l.laptop_model_id ? R.lmMap[l.laptop_model_id] ?? '—' : '—'}</td>
+                      <td>{osEmoji(R.osMap[l.os_id])}</td>
+                      <td>{ramLabel(l.ram_gb, l.ram_type)}</td>
+                      <td>{storageLabel(l.storage_gb, l.storage_type)}</td>
+                      <td><code style={{ fontSize: 11 }}>{l.mac_address ?? '—'}</code></td>
+                      <td>{l.equipment_user_id ? R.equipMap[l.equipment_user_id] ?? '—' : '—'}</td>
+                      <td style={{ fontSize: 12, color: 'var(--muted)', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.observations ?? '—'}</td>
+                      {canEdit && (
+                        <td>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className="btn btn-sm" onClick={() => setEditItem({ item: l, type: 'laptop' })}>
+                              Editar
+                            </button>
+                            <button className="btn btn-danger btn-sm" onClick={() => handleDelete(l.computer_id, l.hostname)}>
+                              Eliminar
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {/* Paginación */}
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 12 }}>
+              <button className="btn btn-sm" disabled={page === 1} onClick={() => setPage(page - 1)}>Anterior</button>
+              <span>Pàgina {page} de {totalLaptopPages}</span>
+              <button className="btn btn-sm" disabled={page === totalLaptopPages} onClick={() => setPage(page + 1)}>Següent</button>
+            </div>
+          </>
         )}
       </div>
 
