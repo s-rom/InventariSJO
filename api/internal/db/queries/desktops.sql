@@ -3,12 +3,12 @@ SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
     d.desktop_model_id,
-    COALESCE(d.cpu_id,        dm.cpu_id)            AS cpu_id,
-    COALESCE(d.ram_gb,        dm.base_ram_gb)        AS ram_gb,
-    COALESCE(d.ram_type,      dm.base_ram_type)      AS ram_type,
-    COALESCE(d.storage_gb,    dm.base_storage_gb)    AS storage_gb,
-    COALESCE(d.storage_type,  dm.base_storage_type)  AS storage_type,
-    COALESCE(d.os_id,         dm.base_os_id)         AS os_id,
+    COALESCE(d.cpu_id,       CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.cpu_id       END) AS cpu_id,
+    COALESCE(d.ram_gb,       CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_ram_gb       END) AS ram_gb,
+    COALESCE(d.ram_type,     CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_ram_type     END) AS ram_type,
+    COALESCE(d.storage_gb,   CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_storage_gb   END) AS storage_gb,
+    COALESCE(d.storage_type, CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_storage_type END) AS storage_type,
+    COALESCE(d.os_id,        CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_os_id        END) AS os_id,
     d.equipment_user_id, d.has_wifi_card, d.mac_address
 FROM computer c
 INNER JOIN desktop d ON d.computer_id = c.computer_id
@@ -20,12 +20,12 @@ SELECT
     c.computer_id, c.hostname, c.room_id, c.observations,
     c.created_by_app_user_id, c.created_at, c.updated_at,
     d.desktop_model_id,
-    COALESCE(d.cpu_id,        dm.cpu_id)            AS cpu_id,
-    COALESCE(d.ram_gb,        dm.base_ram_gb)        AS ram_gb,
-    COALESCE(d.ram_type,      dm.base_ram_type)      AS ram_type,
-    COALESCE(d.storage_gb,    dm.base_storage_gb)    AS storage_gb,
-    COALESCE(d.storage_type,  dm.base_storage_type)  AS storage_type,
-    COALESCE(d.os_id,         dm.base_os_id)         AS os_id,
+    COALESCE(d.cpu_id,       CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.cpu_id       END) AS cpu_id,
+    COALESCE(d.ram_gb,       CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_ram_gb       END) AS ram_gb,
+    COALESCE(d.ram_type,     CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_ram_type     END) AS ram_type,
+    COALESCE(d.storage_gb,   CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_storage_gb   END) AS storage_gb,
+    COALESCE(d.storage_type, CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_storage_type END) AS storage_type,
+    COALESCE(d.os_id,        CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_os_id        END) AS os_id,
     d.equipment_user_id, d.has_wifi_card, d.mac_address
 FROM computer c
 INNER JOIN desktop d ON d.computer_id = c.computer_id

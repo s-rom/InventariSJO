@@ -274,7 +274,7 @@ CREATE INDEX ON student (class_id);
 -- ASSIGNACIONS DE PORTÀTIL A ALUMNES
 --
 -- Cada portàtil estudiantil pot tenir fins a dues assignacions per
--- any acadèmic: una per torn morning i una per torn afternoon.
+-- any acadèmic: una per torn 'morning' i una per torn 'afternoon'.
 -- El torn no s'emmagatzema aquí perquè ja és un atribut de la
 -- classe de l'alumne (student → school_class.shift).
 --
@@ -294,7 +294,7 @@ CREATE INDEX ON student (class_id);
 --
 -- academic_year: format '2025-2026'
 -- El tutor de la classe pot modificar les assignacions del seu grup.
--- ============================================================
+-- ==============================cambia_esto==============================
 CREATE TABLE laptop_student_assignment (
     assignment_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     -- Referencia laptop, no computer, per garantir que només s'assignen portàtils
