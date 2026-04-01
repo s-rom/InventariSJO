@@ -18,9 +18,9 @@ RETURNING *;
 -- name: UpdateComputerBase :one
 UPDATE computer
 SET
-    hostname     = COALESCE(sqlc.narg(hostname),     hostname),
-    room_id      = COALESCE(sqlc.narg(room_id),      room_id),
-    observations = COALESCE(sqlc.narg(observations),  observations),
+    hostname     = COALESCE(sqlc.narg(hostname),  hostname),
+    room_id      = COALESCE(sqlc.narg(room_id),   room_id),
+    observations = sqlc.narg(observations),
     updated_at   = now()
 WHERE computer_id = sqlc.arg(computer_id)
 RETURNING *;
