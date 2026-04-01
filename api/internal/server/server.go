@@ -126,6 +126,8 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	mux.HandleFunc("GET /laptops/{laptopId}/assignments", assignmentsH.List)
 	mux.HandleFunc("POST /laptops/{laptopId}/assignments", assignmentsH.Create)
 	mux.HandleFunc("GET /classes/{classId}/assignments", assignmentsH.ListByClass)
+	mux.HandleFunc("GET /assignments", assignmentsH.ListByYear)
+	mux.HandleFunc("GET /academic-years", assignmentsH.ListAcademicYears)
 	mux.HandleFunc("GET /assignments/{id}", assignmentsH.Get)
 	mux.HandleFunc("PATCH /assignments/{id}", assignmentsH.Update)
 	mux.HandleFunc("DELETE /assignments/{id}", assignmentsH.Delete)

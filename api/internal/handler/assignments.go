@@ -44,10 +44,25 @@ func (h *AssignmentsHandler) List(w http.ResponseWriter, r *http.Request) {
 }
 
 // ListByClass is called via GET /classes/{classId}/assignments
+// Accepts optional query param ?year=2025-2026. If present, returns only
+// assignments for that academic year with the laptop hostname included.
 func (h *AssignmentsHandler) ListByClass(w http.ResponseWriter, r *http.Request) {
 	classID, err := strconv.ParseInt(r.PathValue("classId"), 10, 64)
 	if err != nil {
 		respondError(w, http.StatusBadRequest, "invalid classId")
+		return
+	}
+	if year := r.URL.Query().Get("year"); year != "" {
+		assignments, err := h.queries.ListAssignmentsByClassAndYear(r.Context(), dbsqlc.ListAssignmentsByClassAndYearParams{
+			ClassID:      classID,
+			AcademicYear: year,
+		})
+		if err != nil {
+			h.logger.Error("list assignments by class and year", "error", err)
+			respondError(w, http.StatusInternalServerError, "internal error")
+			return
+		}
+		respondJSON(w, http.StatusOK, assignments)
 		return
 	}
 	assignments, err := h.queries.ListAssignmentsByClass(r.Context(), classID)
@@ -57,6 +72,38 @@ func (h *AssignmentsHandler) ListByClass(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	respondJSON(w, http.StatusOK, assignments)
+}
+
+// ListByYear is called via GET /assignments?year=2025-2026
+// Returns all assignments for a given academic year across all classes.
+func (h *AssignmentsHandler) ListByYear(w http.ResponseWriter, r *http.Request) {
+	year := r.URL.Query().Get("year")
+	if year == "" {
+		respondError(w, http.StatusBadRequest, "year query param required")
+		return
+	}
+	assignments, err := h.queries.ListAssignmentsByYear(r.Context(), year)
+	if err != nil {
+		h.logger.Error("list assignments by year", "error", err)
+		respondError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	respondJSON(w, http.StatusOK, assignments)
+}
+
+// ListAcademicYears is called via GET /academic-years
+// Returns the distinct academic years that have at least one assignment.
+func (h *AssignmentsHandler) ListAcademicYears(w http.ResponseWriter, r *http.Request) {
+	years, err := h.queries.ListDistinctAcademicYears(r.Context())
+	if err != nil {
+		h.logger.Error("list academic years", "error", err)
+		respondError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	if years == nil {
+		years = []string{}
+	}
+	respondJSON(w, http.StatusOK, years)
 }
 
 func (h *AssignmentsHandler) Get(w http.ResponseWriter, r *http.Request) {

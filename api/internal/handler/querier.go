@@ -16,7 +16,10 @@ type Querier interface {
 	DeleteAssignment(ctx context.Context, assignmentID int64) error
 	GetAssignment(ctx context.Context, assignmentID int64) (dbsqlc.LaptopStudentAssignment, error)
 	ListAssignmentsByClass(ctx context.Context, classID int64) ([]dbsqlc.ListAssignmentsByClassRow, error)
+	ListAssignmentsByClassAndYear(ctx context.Context, arg dbsqlc.ListAssignmentsByClassAndYearParams) ([]dbsqlc.ListAssignmentsByClassAndYearRow, error)
 	ListAssignmentsByLaptop(ctx context.Context, computerID int64) ([]dbsqlc.ListAssignmentsByLaptopRow, error)
+	ListAssignmentsByYear(ctx context.Context, academicYear string) ([]dbsqlc.ListAssignmentsByYearRow, error)
+	ListDistinctAcademicYears(ctx context.Context) ([]string, error)
 	UpdateAssignment(ctx context.Context, arg dbsqlc.UpdateAssignmentParams) (dbsqlc.LaptopStudentAssignment, error)
 	// Audit
 	GetAuditLog(ctx context.Context, arg dbsqlc.GetAuditLogParams) ([]dbsqlc.AuditLog, error)

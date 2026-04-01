@@ -36,9 +36,24 @@ func (m *Querier) ListAssignmentsByClass(ctx context.Context, classID int64) ([]
 	v, _ := a.Get(0).([]dbsqlc.ListAssignmentsByClassRow)
 	return v, a.Error(1)
 }
+func (m *Querier) ListAssignmentsByClassAndYear(ctx context.Context, arg dbsqlc.ListAssignmentsByClassAndYearParams) ([]dbsqlc.ListAssignmentsByClassAndYearRow, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).([]dbsqlc.ListAssignmentsByClassAndYearRow)
+	return v, a.Error(1)
+}
 func (m *Querier) ListAssignmentsByLaptop(ctx context.Context, computerID int64) ([]dbsqlc.ListAssignmentsByLaptopRow, error) {
 	a := m.Called(ctx, computerID)
 	v, _ := a.Get(0).([]dbsqlc.ListAssignmentsByLaptopRow)
+	return v, a.Error(1)
+}
+func (m *Querier) ListAssignmentsByYear(ctx context.Context, academicYear string) ([]dbsqlc.ListAssignmentsByYearRow, error) {
+	a := m.Called(ctx, academicYear)
+	v, _ := a.Get(0).([]dbsqlc.ListAssignmentsByYearRow)
+	return v, a.Error(1)
+}
+func (m *Querier) ListDistinctAcademicYears(ctx context.Context) ([]string, error) {
+	a := m.Called(ctx)
+	v, _ := a.Get(0).([]string)
 	return v, a.Error(1)
 }
 func (m *Querier) UpdateAssignment(ctx context.Context, arg dbsqlc.UpdateAssignmentParams) (dbsqlc.LaptopStudentAssignment, error) {

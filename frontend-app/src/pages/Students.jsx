@@ -282,318 +282,82 @@ function StudentsTab() {
 }
 
 // ─────────────────────────────────────────────
-// Tab 2 — Laptop assignments management
+// Tab 2 — Laptop assignments (class + year centric)
 // ─────────────────────────────────────────────
 function AssignmentsTab() {
   const { role } = useAuth();
   const isTutor  = role === 'tutor';
 
-  const [laptops,       setLaptops]       = useState([]);
-  const [laptopId,      setLaptopId]      = useState(null);
-  const [assignments,   setAssignments]   = useState([]);
-  const [allClasses,    setAllClasses]    = useState([]); // for dropdowns
-  const [allStudents,   setAllStudents]   = useState([]); // all students flat
-  const [lmMap,         setLmMap]         = useState({});
-  const [saving,        setSaving]        = useState(false);
-  const [showForm,      setShowForm]      = useState(false);
-  const [err,           setErr]           = useState('');
-  const cd = useConfirmDelete();
-
-  const EMPTY_A = { student_id: null, class_id: null, academic_year: currentAcademicYear() };
-  const [form, setForm]         = useState(EMPTY_A);
-  const [editId, setEditId]     = useState(null);
-  const [editForm, setEditForm] = useState({});
-
-  function setF(k, v)  { setForm(f => ({ ...f, [k]: v })); }
-  function setEF(k, v) { setEditForm(f => ({ ...f, [k]: v })); }
-
   function currentAcademicYear() {
     const now = new Date();
     const y = now.getFullYear();
     return now.getMonth() >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
   }
 
-  // Load laptops, models, classes + students on mount
+  const [academicYears, setAcademicYears] = useState([]);
+  const [selectedYear,  setSelectedYear]  = useState(currentAcademicYear());
+  const [cycles,        setCycles]        = useState([]);
+  const [cycleId,       setCycleId]       = useState(null);
+  const [classes,       setClasses]       = useState([]);
+  const [classId,       setClassId]       = useState(null);
+  const [students,      setStudents]      = useState([]);
+  const [assignments,   setAssignments]   = useState([]);
+  const [laptops,       setLaptops]       = useState([]);
+  const [lmMap,         setLmMap]         = useState({});
+  const [pendingId,     setPendingId]     = useState(null);
+  const [err,           setErr]           = useState('');
+  const cd = useConfirmDelete();
+
+  // Load years, laptops, models, and initial class list
   useEffect(() => {
     async function load() {
-      const [lts, lm] = await Promise.all([api.listLaptops(), api.listLaptopModels()]).catch(() => [[], []]);
-      const lmMapObj = Object.fromEntries((lm ?? []).map(m => [m.laptop_model_id, `${m.brand_name} ${m.model_name}`]));
+      const cur = currentAcademicYear();
+      const [years, lts, lm] = await Promise.all([
+        api.listAcademicYears().catch(() => []),
+        api.listLaptops().catch(() => []),
+        api.listLaptopModels().catch(() => []),
+      ]);
+      const yearList = [...new Set([cur, ...(years ?? [])])].sort().reverse();
+      setAcademicYears(yearList);
       setLaptops(lts ?? []);
-      setLmMap(lmMapObj);
+      setLmMap(Object.fromEntries((lm ?? []).map(m => [m.laptop_model_id, `${m.brand_name} ${m.model_name}`])));
 
-      let flatClasses;
       if (isTutor) {
-        // Tutors only see their own classes
         const myClasses = await api.listMyClasses().catch(() => []);
-        flatClasses = (myClasses ?? []).map(cl => ({ ...cl, cycleName: cl.cycle_name ?? '' }));
+        const list = myClasses ?? [];
+        setClasses(list);
+        if (list.length) setClassId(list[0].class_id);
       } else {
-        // Admins/editors see all classes across all cycles
-        const cycles = await api.listCycles().catch(() => []);
-        const classesNested = await Promise.all(
-          (cycles ?? []).map(c =>
-            api.listClassesByCycle(c.cycle_id)
-              .then(cls => (cls ?? []).map(cl => ({ ...cl, cycleName: c.name })))
-              .catch(() => [])
-          )
-        );
-        flatClasses = classesNested.flat();
+        const cyc = await api.listCycles().catch(() => []);
+        setCycles(cyc ?? []);
+        if ((cyc ?? []).length) setCycleId(cyc[0].cycle_id);
       }
-      setAllClasses(flatClasses);
-
-      const studentsNested = await Promise.all(
-        flatClasses.map(cl =>
-          api.listStudentsByClass(cl.class_id)
-            .then(sts => (sts ?? []).map(s => ({ ...s, className: `${cl.cycleName} ${cl.course}r${cl.class_label}` })))
-            .catch(() => [])
-        )
-      );
-      setAllStudents(studentsNested.flat());
     }
     load();
   }, [isTutor]);
 
-  const loadAssignments = useCallback(() => {
-    if (!laptopId) return;
-    api.listAssignmentsByLaptop(laptopId).then(d => setAssignments(d ?? [])).catch(() => {});
-  }, [laptopId]);
-
-  useEffect(() => { setAssignments([]); setShowForm(false); setEditId(null); setForm(prev => ({ ...prev, student_id: null, class_id: null })); loadAssignments(); }, [loadAssignments]);
-
-  async function create(e) {
-    e.preventDefault(); if (!laptopId) return; setErr(''); setSaving(true);
-    try {
-      await api.createAssignment(laptopId, {
-        student_id:    form.student_id,
-        class_id:      form.class_id,
-        academic_year: form.academic_year,
-      });
-      setShowForm(false);
-      setForm(EMPTY_A);
-      loadAssignments();
-    } catch (ex) { setErr(ex.message); }
-    finally { setSaving(false); }
-  }
-
-  async function saveEdit(id) {
-    try {
-      await api.updateAssignment(id, {
-        student_id:    editForm.student_id    || undefined,
-        class_id:      editForm.class_id      || undefined,
-        academic_year: editForm.academic_year || undefined,
-      });
-      setEditId(null); loadAssignments();
-    } catch (ex) { setErr(ex.message); }
-  }
-
-  async function del(id) {
-    try { await api.deleteAssignment(id); loadAssignments(); }
-    catch (ex) { setErr(ex.message); }
-    cd.cancelDelete();
-  }
-
-  const laptopOpts = laptops.map(l => ({
-    value: l.computer_id,
-    label: l.laptop_model_id
-      ? `${l.hostname}  (${lmMap[l.laptop_model_id] ?? '—'})`
-      : l.hostname,
-  }));
-
-  const studentOpts = allStudents.map(s => ({
-    value: s.student_id,
-    label: `${s.full_name}  [${s.className}]`,
-  }));
-
-  const classOpts = allClasses.map(c => ({
-    value: c.class_id,
-    label: `${c.cycleName} · ${c.course}r ${c.class_label} (${SHIFTS_LABEL[c.shift] ?? c.shift})`,
-  }));
-
-  const selectedLaptop = laptops.find(l => l.computer_id === laptopId);
-
-  return (
-    <div>
-      {/* Laptop selector */}
-      <div className="filter-bar">
-        <div className="filter-item" style={{ minWidth: 340 }}>
-          <label>Portàtil</label>
-          <Combobox
-            options={laptopOpts}
-            value={laptopId}
-            onChange={v => setLaptopId(v)}
-            placeholder="Cerca portàtil per hostname…"
-          />
-        </div>
-        {selectedLaptop && (
-          <div className="filter-badge">
-            <strong>{selectedLaptop.hostname}</strong>
-            {selectedLaptop.laptop_model_id && <> · {lmMap[selectedLaptop.laptop_model_id]}</>}
-          </div>
-        )}
-      </div>
-
-      {laptopId && (
-        <>
-          {/* Assignment list */}
-          <div className="card" style={{ marginBottom: 14 }}>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Alumne</th>
-                    <th>Classe</th>
-                    <th>Any acadèmic</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {assignments.length === 0 && (
-                    <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>
-                      Cap assignació per a aquest portàtil.
-                    </td></tr>
-                  )}
-                  {assignments.map(a => (
-                    <tr key={a.assignment_id}>
-                      <td>
-                        {editId === a.assignment_id
-                          ? <Combobox options={studentOpts} value={editForm.student_id} onChange={v => setEF('student_id', v)} placeholder="Alumne…" />
-                          : <strong>{a.student_name}</strong>}
-                      </td>
-                      <td>
-                        {editId === a.assignment_id
-                          ? <Combobox options={classOpts} value={editForm.class_id} onChange={v => setEF('class_id', v)} placeholder="Classe…" />
-                          : <span style={{ color: 'var(--muted)', fontSize: 12 }}>
-                              {a.course}r{a.class_label} · {SHIFTS_LABEL[a.shift] ?? a.shift}
-                            </span>}
-                      </td>
-                      <td>
-                        {editId === a.assignment_id
-                          ? <input type="text" value={editForm.academic_year} onChange={e => setEF('academic_year', e.target.value)} style={{ width: 100 }} />
-                          : a.academic_year}
-                      </td>
-                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                        {editId === a.assignment_id ? (
-                          <>
-                            <button className="btn btn-primary btn-sm" onClick={() => saveEdit(a.assignment_id)}>Guardar</button>
-                            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancel·lar</button>
-                          </>
-                        ) : cd.isAsking(a.assignment_id) ? (
-                          <>
-                            <span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Eliminar?</span>
-                            <button className="btn btn-danger btn-sm" onClick={() => del(a.assignment_id)}>Sí</button>
-                            <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button>
-                          </>
-                        ) : (
-                          <>
-                            <button className="btn btn-ghost btn-sm" onClick={() => {
-                              setEditId(a.assignment_id);
-                              setEditForm({ student_id: a.student_id, class_id: a.class_id, academic_year: a.academic_year });
-                            }}>Editar</button>
-                            <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(a.assignment_id)}>Eliminar</button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Add assignment form */}
-          {showForm ? (
-            <div className="card">
-              <form onSubmit={create} className="form-panel">
-                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 14 }}>Nova assignació</div>
-                <div className="form-grid">
-                  <div className="form-group">
-                    <label>Alumne *</label>
-                    <Combobox
-                      options={studentOpts}
-                      value={form.student_id}
-                      onChange={v => setF('student_id', v)}
-                      placeholder="Cerca alumne…"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Classe *</label>
-                    <Combobox
-                      options={classOpts}
-                      value={form.class_id}
-                      onChange={v => setF('class_id', v)}
-                      placeholder="Selecciona classe…"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label>Any acadèmic *</label>
-                    <input
-                      type="text"
-                      value={form.academic_year}
-                      onChange={e => setF('academic_year', e.target.value)}
-                      placeholder="2025-2026"
-                      required
-                    />
-                  </div>
-                </div>
-                {err && <div className="error-msg" style={{ marginTop: 10 }}>{err}</div>}
-                <div className="form-actions">
-                  <button type="submit" className="btn btn-primary" disabled={saving || !form.student_id || !form.class_id || !form.academic_year}>
-                    {saving ? 'Guardant…' : 'Crear assignació'}
-                  </button>
-                  <button type="button" className="btn btn-ghost" onClick={() => { setShowForm(false); setErr(''); }}>
-                    Cancel·lar
-                  </button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            <button className="btn btn-primary" onClick={() => setShowForm(true)}>
-              + Nova assignació
-            </button>
-          )}
-        </>
-      )}
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────
-// Tutor view: student-centric assignment table
-// ─────────────────────────────────────────────
-function TutorView() {
-  function currentAcademicYear() {
-    const now = new Date();
-    const y = now.getFullYear();
-    return now.getMonth() >= 8 ? `${y}-${y + 1}` : `${y - 1}-${y}`;
-  }
-
-  const [classes,     setClasses]     = useState([]);
-  const [classId,     setClassId]     = useState(null);
-  const [students,    setStudents]    = useState([]);
-  const [assignments, setAssignments] = useState([]);
-  const [laptops,     setLaptops]     = useState([]);
-  const [pendingId,   setPendingId]   = useState(null);
-  const [err,         setErr]         = useState('');
-
+  // Load classes when cycle changes (admin/editor only)
   useEffect(() => {
-    Promise.all([api.listMyClasses(), api.listLaptops()])
-      .then(([cls, lts]) => {
-        const list = cls ?? [];
+    if (isTutor || !cycleId) return;
+    api.listClassesByCycle(cycleId)
+      .then(d => {
+        const list = d ?? [];
         setClasses(list);
-        if (list.length) setClassId(list[0].class_id);
-        setLaptops(lts ?? []);
+        setClassId(list.length ? list[0].class_id : null);
       })
       .catch(() => {});
-  }, []);
+  }, [cycleId, isTutor]);
 
+  // Load students + assignments when class or year changes
   const loadData = useCallback(async () => {
-    if (!classId) return;
+    if (!classId || !selectedYear) return;
     const [sts, asgns] = await Promise.all([
       api.listStudentsByClass(classId).catch(() => []),
-      api.listAssignmentsByClass(classId).catch(() => []),
+      api.listAssignmentsByClassAndYear(classId, selectedYear).catch(() => []),
     ]);
     setStudents(sts ?? []);
     setAssignments(asgns ?? []);
-  }, [classId]);
+  }, [classId, selectedYear]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -601,21 +365,22 @@ function TutorView() {
     (assignments ?? []).map(a => [a.student_id, a])
   );
 
-  const laptopOpts = laptops.map(l => ({ value: l.computer_id, label: l.hostname }));
+  const laptopOpts = laptops.map(l => ({
+    value: l.computer_id,
+    label: l.laptop_model_id ? `${l.hostname}  (${lmMap[l.laptop_model_id] ?? '—'})` : l.hostname,
+  }));
 
   async function handleAssign(studentId, newLaptopId) {
     setPendingId(studentId);
     setErr('');
     const existing = assignmentByStudent[studentId];
     try {
-      if (existing) {
-        await api.deleteAssignment(existing.assignment_id);
-      }
+      if (existing) await api.deleteAssignment(existing.assignment_id);
       if (newLaptopId) {
         await api.createAssignment(newLaptopId, {
           student_id:    studentId,
           class_id:      classId,
-          academic_year: currentAcademicYear(),
+          academic_year: selectedYear,
         });
       }
       await loadData();
@@ -626,25 +391,51 @@ function TutorView() {
     }
   }
 
+  async function del(assignmentId) {
+    try { await api.deleteAssignment(assignmentId); await loadData(); }
+    catch (ex) { setErr(ex.message); }
+    cd.cancelDelete();
+  }
+
   const selectedClass = classes.find(c => c.class_id === classId);
+  const assignedCount = students.filter(s => assignmentByStudent[s.student_id]).length;
 
   return (
     <div>
       <div className="filter-bar">
         <div className="filter-item">
+          <label>Any acadèmic</label>
+          <select value={selectedYear} onChange={e => setSelectedYear(e.target.value)} style={{ width: 130 }}>
+            {academicYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        {!isTutor && (
+          <div className="filter-item">
+            <label>Cicle</label>
+            <select value={cycleId ?? ''} onChange={e => setCycleId(Number(e.target.value))} style={{ width: 140 }}>
+              {cycles.length === 0 && <option value="">— cap cicle —</option>}
+              {cycles.map(c => <option key={c.cycle_id} value={c.cycle_id}>{c.name}</option>)}
+            </select>
+          </div>
+        )}
+        <div className="filter-item">
           <label>Classe</label>
-          <select value={classId ?? ''} onChange={e => setClassId(Number(e.target.value))} style={{ width: 240 }}>
-            {classes.length === 0 && <option value="">— sense cursos assignats —</option>}
+          <select value={classId ?? ''} onChange={e => setClassId(Number(e.target.value))} style={{ width: 200 }}>
+            {classes.length === 0 && <option value="">{isTutor ? '— sense cursos assignats —' : '— cap classe —'}</option>}
             {classes.map(c => (
               <option key={c.class_id} value={c.class_id}>
-                {c.cycle_name ?? ''} · {c.course}r {c.class_label} — {SHIFTS_LABEL[c.shift] ?? c.shift}
+                {isTutor ? `${c.cycle_name ?? ''} · ` : ''}{c.course}r {c.class_label} — {SHIFTS_LABEL[c.shift] ?? c.shift}
               </option>
             ))}
           </select>
         </div>
         {selectedClass && (
           <div className="filter-badge">
-            <strong>{students.length}</strong> alumnes · any {currentAcademicYear()}
+            {isTutor
+              ? `${selectedClass.cycle_name ?? ''} · `
+              : `${cycles.find(c => c.cycle_id === cycleId)?.name ?? ''} · `
+            }{selectedClass.course}r {selectedClass.class_label}
+            {' · '}<strong>{assignedCount}</strong>/{students.length} assignats
           </div>
         )}
       </div>
@@ -659,11 +450,12 @@ function TutorView() {
                 <tr>
                   <th>Alumne</th>
                   <th>Portàtil assignat</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {students.length === 0 && (
-                  <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>
+                  <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>
                     Cap alumne a aquesta classe.
                   </td></tr>
                 )}
@@ -684,6 +476,19 @@ function TutorView() {
                             />
                         }
                       </td>
+                      <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {assignment && (
+                          cd.isAsking(assignment.assignment_id) ? (
+                            <>
+                              <span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Eliminar?</span>
+                              <button className="btn btn-danger btn-sm" onClick={() => del(assignment.assignment_id)}>Sí</button>
+                              <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button>
+                            </>
+                          ) : (
+                            <button className="btn btn-danger btn-sm" onClick={() => cd.askDelete(assignment.assignment_id)}>Eliminar</button>
+                          )
+                        )}
+                      </td>
                     </tr>
                   );
                 })}
@@ -695,6 +500,8 @@ function TutorView() {
     </div>
   );
 }
+
+
 
 // ─────────────────────────────────────────────
 // Main page
@@ -710,7 +517,7 @@ export default function Students() {
         <div className="page-header">
           <h1 className="page-title">💻 Assignacions de portàtils</h1>
         </div>
-        <TutorView />
+        <AssignmentsTab />
       </>
     );
   }

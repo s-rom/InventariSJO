@@ -115,6 +115,62 @@ func (q *Queries) ListAssignmentsByClass(ctx context.Context, classID int64) ([]
 	return items, nil
 }
 
+const listAssignmentsByClassAndYear = `-- name: ListAssignmentsByClassAndYear :many
+SELECT
+    lsa.assignment_id, lsa.computer_id, lsa.student_id,
+    lsa.class_id, lsa.academic_year,
+    s.full_name AS student_name,
+    c.hostname
+FROM laptop_student_assignment lsa
+JOIN student s      ON s.student_id   = lsa.student_id
+JOIN computer c     ON c.computer_id  = lsa.computer_id
+WHERE lsa.class_id = $1 AND lsa.academic_year = $2
+ORDER BY s.full_name
+`
+
+type ListAssignmentsByClassAndYearParams struct {
+	ClassID      int64  `json:"class_id"`
+	AcademicYear string `json:"academic_year"`
+}
+
+type ListAssignmentsByClassAndYearRow struct {
+	AssignmentID int64  `json:"assignment_id"`
+	ComputerID   int64  `json:"computer_id"`
+	StudentID    int64  `json:"student_id"`
+	ClassID      int64  `json:"class_id"`
+	AcademicYear string `json:"academic_year"`
+	StudentName  string `json:"student_name"`
+	Hostname     string `json:"hostname"`
+}
+
+func (q *Queries) ListAssignmentsByClassAndYear(ctx context.Context, arg ListAssignmentsByClassAndYearParams) ([]ListAssignmentsByClassAndYearRow, error) {
+	rows, err := q.db.Query(ctx, listAssignmentsByClassAndYear, arg.ClassID, arg.AcademicYear)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAssignmentsByClassAndYearRow
+	for rows.Next() {
+		var i ListAssignmentsByClassAndYearRow
+		if err := rows.Scan(
+			&i.AssignmentID,
+			&i.ComputerID,
+			&i.StudentID,
+			&i.ClassID,
+			&i.AcademicYear,
+			&i.StudentName,
+			&i.Hostname,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listAssignmentsByLaptop = `-- name: ListAssignmentsByLaptop :many
 SELECT
     lsa.assignment_id, lsa.computer_id, lsa.student_id,
@@ -165,6 +221,97 @@ func (q *Queries) ListAssignmentsByLaptop(ctx context.Context, computerID int64)
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAssignmentsByYear = `-- name: ListAssignmentsByYear :many
+SELECT
+    lsa.assignment_id, lsa.computer_id, lsa.student_id,
+    lsa.class_id, lsa.academic_year,
+    s.full_name AS student_name,
+    c.hostname,
+    sc.course, sc.class_label, sc.shift, sc.cycle_id,
+    cy.name AS cycle_name
+FROM laptop_student_assignment lsa
+JOIN student s        ON s.student_id   = lsa.student_id
+JOIN school_class sc  ON sc.class_id    = lsa.class_id
+JOIN cycle cy         ON cy.cycle_id    = sc.cycle_id
+JOIN computer c       ON c.computer_id  = lsa.computer_id
+WHERE lsa.academic_year = $1
+ORDER BY cy.name, sc.course, sc.class_label, s.full_name
+`
+
+type ListAssignmentsByYearRow struct {
+	AssignmentID int64     `json:"assignment_id"`
+	ComputerID   int64     `json:"computer_id"`
+	StudentID    int64     `json:"student_id"`
+	ClassID      int64     `json:"class_id"`
+	AcademicYear string    `json:"academic_year"`
+	StudentName  string    `json:"student_name"`
+	Hostname     string    `json:"hostname"`
+	Course       int16     `json:"course"`
+	ClassLabel   string    `json:"class_label"`
+	Shift        ShiftEnum `json:"shift"`
+	CycleID      int64     `json:"cycle_id"`
+	CycleName    string    `json:"cycle_name"`
+}
+
+func (q *Queries) ListAssignmentsByYear(ctx context.Context, academicYear string) ([]ListAssignmentsByYearRow, error) {
+	rows, err := q.db.Query(ctx, listAssignmentsByYear, academicYear)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAssignmentsByYearRow
+	for rows.Next() {
+		var i ListAssignmentsByYearRow
+		if err := rows.Scan(
+			&i.AssignmentID,
+			&i.ComputerID,
+			&i.StudentID,
+			&i.ClassID,
+			&i.AcademicYear,
+			&i.StudentName,
+			&i.Hostname,
+			&i.Course,
+			&i.ClassLabel,
+			&i.Shift,
+			&i.CycleID,
+			&i.CycleName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDistinctAcademicYears = `-- name: ListDistinctAcademicYears :many
+SELECT DISTINCT academic_year
+FROM laptop_student_assignment
+ORDER BY academic_year DESC
+`
+
+func (q *Queries) ListDistinctAcademicYears(ctx context.Context) ([]string, error) {
+	rows, err := q.db.Query(ctx, listDistinctAcademicYears)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var academic_year string
+		if err := rows.Scan(&academic_year); err != nil {
+			return nil, err
+		}
+		items = append(items, academic_year)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err

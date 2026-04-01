@@ -118,8 +118,11 @@ export const api = {
   },
 
   // ── Laptop Assignments ────────────────────────────────────
-  listAssignmentsByLaptop: (laptopId)       => req(`/laptops/${laptopId}/assignments`),
-  listAssignmentsByClass:  (classId)        => req(`/classes/${classId}/assignments`),
+  listAssignmentsByLaptop:      (laptopId)        => req(`/laptops/${laptopId}/assignments`),
+  listAssignmentsByClass:       (classId)         => req(`/classes/${classId}/assignments`),
+  listAssignmentsByClassAndYear:(classId, year)   => req(`/classes/${classId}/assignments?year=${encodeURIComponent(year)}`),
+  listAssignmentsByYear:        (year)            => req(`/assignments?year=${encodeURIComponent(year)}`),
+  listAcademicYears:            ()               => req('/academic-years'),
   createAssignment:        (laptopId, data) => req(`/laptops/${laptopId}/assignments`, { method: 'POST',  body: JSON.stringify(data) }),
   updateAssignment:        (id, data)       => req(`/assignments/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
   deleteAssignment:        (id)             => req(`/assignments/${id}`, { method: 'DELETE' }),
