@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	dbsqlc "inventari/api/internal/db/sqlc"
 	"inventari/api/internal/session"
 
 	"golang.org/x/crypto/bcrypt"
@@ -84,4 +85,51 @@ func generateToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(b), nil
+}
+
+// ChangePassword is called via POST /auth/change-password
+// Any authenticated user can change their own password.
+// Requires current_password (for verification) and new_password.
+func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		CurrentPassword string `json:"current_password"`
+		NewPassword     string `json:"new_password"`
+	}
+	if err := decodeJSON(r, &req); err != nil || req.CurrentPassword == "" || req.NewPassword == "" {
+		respondError(w, http.StatusBadRequest, "current_password and new_password required")
+		return
+	}
+	if len(req.NewPassword) < 8 {
+		respondError(w, http.StatusBadRequest, "new password must be at least 8 characters")
+		return
+	}
+
+	user := currentUser(r)
+
+	// Re-fetch to get the stored hash (currentUser comes from session, no hash there)
+	dbUser, err := h.queries.GetUserByUsername(r.Context(), user.Username)
+	if err != nil {
+		respondError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+		respondError(w, http.StatusUnauthorized, "current password is incorrect")
+		return
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		h.logger.Error("bcrypt generate", "error", err)
+		respondError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	if err := h.queries.UpdateUserPassword(r.Context(), dbsqlc.UpdateUserPasswordParams{
+		AppUserID:    user.AppUserID,
+		PasswordHash: string(hash),
+	}); err != nil {
+		h.logger.Error("update password", "error", err)
+		respondError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]string{"message": "password updated"})
 }

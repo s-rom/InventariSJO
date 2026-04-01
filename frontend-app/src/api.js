@@ -35,6 +35,7 @@ export const api = {
     clearRole();
   },
   me: () => req('/auth/me'),
+  changePassword: (data) => req('/auth/change-password', { method: 'POST', body: JSON.stringify(data) }),
 
   // ── CPUs ──────────────────────────────────────────────────
   listCpus:   ()         => req('/cpus'),

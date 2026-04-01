@@ -10,7 +10,7 @@ import Students    from './pages/Students';
 import Reference   from './pages/Reference';
 import Users       from './pages/Users';
 
-export const AuthContext = createContext({ role: null });
+export const AuthContext = createContext({ role: null, username: null });
 export function useAuth() { return useContext(AuthContext); }
 
 function RequireAuth({ children }) {
@@ -24,14 +24,15 @@ function RequireAdmin({ role, children }) {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(null); // null=checking, false=login, true=in
-  const [role, setRole]     = useState(getRole());
+  const [authed,   setAuthed]   = useState(null); // null=checking, false=login, true=in
+  const [role,     setRole]     = useState(getRole());
+  const [username, setUsername] = useState(null);
 
   // Quick auth probe on mount
   useEffect(() => {
     if (!getToken()) { setAuthed(false); return; }
     api.me()
-      .then((data) => { setRole(data.role_id); setAuthed(true); })
+      .then((data) => { setRole(data.role_id); setUsername(data.username); setAuthed(true); })
       .catch(() => { api.logout(); setAuthed(false); });
   }, []);
 
@@ -43,11 +44,11 @@ export default function App() {
     );
   }
 
-  function handleLogin(data) { setRole(data.role_id); setAuthed(true); }
-  async function handleLogout() { await api.logout(); setRole(null); setAuthed(false); }
+  function handleLogin(data) { setRole(data.role_id); setUsername(data.username); setAuthed(true); }
+  async function handleLogout() { await api.logout(); setRole(null); setUsername(null); setAuthed(false); }
 
   return (
-    <AuthContext.Provider value={{ role }}>
+    <AuthContext.Provider value={{ role, username }}>
       <BrowserRouter>
         <Routes>
           <Route
@@ -58,7 +59,7 @@ export default function App() {
             path="/*"
             element={
               <RequireAuth>
-                <Layout onLogout={handleLogout} role={role}>
+                <Layout onLogout={handleLogout} role={role} username={username}>
                   <Routes>
                     <Route index element={<Navigate to="/computers" replace />} />
                     <Route path="computers"            element={<Computers />} />

@@ -26,6 +26,7 @@ type Querier interface {
 	InsertAuditLog(ctx context.Context, arg dbsqlc.InsertAuditLogParams) error
 	// Auth
 	GetUserByUsername(ctx context.Context, username string) (dbsqlc.AppUser, error)
+	UpdateUserPassword(ctx context.Context, arg dbsqlc.UpdateUserPasswordParams) error
 	// Brands
 	CreateBrand(ctx context.Context, name string) (dbsqlc.Brand, error)
 	DeleteBrand(ctx context.Context, brandID int64) error

@@ -43,6 +43,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	mux.HandleFunc("POST /auth/login", authH.Login)
 	mux.HandleFunc("POST /auth/logout", authH.Logout)
 	mux.HandleFunc("GET /auth/me", authH.Me)
+	mux.HandleFunc("POST /auth/change-password", authH.ChangePassword)
 
 	// ─── Users ────────────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /users", usersH.List)

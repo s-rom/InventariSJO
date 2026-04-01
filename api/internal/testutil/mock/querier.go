@@ -74,6 +74,9 @@ func (m *Querier) GetUserByUsername(ctx context.Context, username string) (dbsql
 	v, _ := a.Get(0).(dbsqlc.AppUser)
 	return v, a.Error(1)
 }
+func (m *Querier) UpdateUserPassword(ctx context.Context, arg dbsqlc.UpdateUserPasswordParams) error {
+	return m.Called(ctx, arg).Error(0)
+}
 func (m *Querier) CreateBrand(ctx context.Context, name string) (dbsqlc.Brand, error) {
 	a := m.Called(ctx, name)
 	v, _ := a.Get(0).(dbsqlc.Brand)

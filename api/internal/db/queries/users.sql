@@ -16,6 +16,11 @@ SET
 WHERE app_user_id = sqlc.arg(app_user_id)
 RETURNING app_user_id, username, role_id;
 
+-- name: UpdateUserPassword :exec
+UPDATE app_user
+SET password_hash = $2
+WHERE app_user_id = $1;
+
 -- name: DeleteUser :exec
 DELETE FROM app_user
 WHERE app_user_id = $1;
