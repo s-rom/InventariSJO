@@ -78,10 +78,13 @@ SELECT
     COALESCE(l.storage_type, lm.base_storage_type) AS storage_type,
     l.mac_address,
     COALESCE(l.os_id, lm.base_os_id) AS os_id,
-    l.equipment_user_id
+    l.equipment_user_id,
+    cpu.model_name    AS cpu_model_name,
+    cpu.benchmark_score AS cpu_benchmark_score
 FROM computer c
 INNER JOIN laptop l ON l.computer_id = c.computer_id
 INNER JOIN laptop_model lm ON lm.laptop_model_id = l.laptop_model_id
+LEFT  JOIN cpu ON cpu.cpu_id = lm.cpu_id
 WHERE c.computer_id = $1
 `
 
@@ -102,6 +105,8 @@ type GetLaptopRow struct {
 	MacAddress         pgtype.Text        `json:"mac_address"`
 	OsID               pgtype.Int8        `json:"os_id"`
 	EquipmentUserID    pgtype.Int8        `json:"equipment_user_id"`
+	CpuModelName       pgtype.Text        `json:"cpu_model_name"`
+	CpuBenchmarkScore  pgtype.Int4        `json:"cpu_benchmark_score"`
 }
 
 func (q *Queries) GetLaptop(ctx context.Context, computerID int64) (GetLaptopRow, error) {
@@ -124,6 +129,8 @@ func (q *Queries) GetLaptop(ctx context.Context, computerID int64) (GetLaptopRow
 		&i.MacAddress,
 		&i.OsID,
 		&i.EquipmentUserID,
+		&i.CpuModelName,
+		&i.CpuBenchmarkScore,
 	)
 	return i, err
 }
@@ -139,10 +146,13 @@ SELECT
     COALESCE(l.storage_type, lm.base_storage_type) AS storage_type,
     l.mac_address,
     COALESCE(l.os_id, lm.base_os_id) AS os_id,
-    l.equipment_user_id
+    l.equipment_user_id,
+    cpu.model_name    AS cpu_model_name,
+    cpu.benchmark_score AS cpu_benchmark_score
 FROM computer c
 INNER JOIN laptop l ON l.computer_id = c.computer_id
 INNER JOIN laptop_model lm ON lm.laptop_model_id = l.laptop_model_id
+LEFT  JOIN cpu ON cpu.cpu_id = lm.cpu_id
 ORDER BY c.computer_id
 `
 
@@ -163,6 +173,8 @@ type ListLaptopsRow struct {
 	MacAddress         pgtype.Text        `json:"mac_address"`
 	OsID               pgtype.Int8        `json:"os_id"`
 	EquipmentUserID    pgtype.Int8        `json:"equipment_user_id"`
+	CpuModelName       pgtype.Text        `json:"cpu_model_name"`
+	CpuBenchmarkScore  pgtype.Int4        `json:"cpu_benchmark_score"`
 }
 
 func (q *Queries) ListLaptops(ctx context.Context) ([]ListLaptopsRow, error) {
@@ -191,6 +203,8 @@ func (q *Queries) ListLaptops(ctx context.Context) ([]ListLaptopsRow, error) {
 			&i.MacAddress,
 			&i.OsID,
 			&i.EquipmentUserID,
+			&i.CpuModelName,
+			&i.CpuBenchmarkScore,
 		); err != nil {
 			return nil, err
 		}

@@ -54,15 +54,6 @@ export default function Computers() {
   const [err,            setErr]            = useState('');
   const [query,          setQuery]          = useState('');
   const [editItem,       setEditItem]       = useState(null); // { item, type }
-  // Ordenado, paginación y filtros independientes
-    // Filtros sobremesas
-    const [filtroCpuDesktop, setFiltroCpuDesktop] = useState('');
-    const [filtroRamDesktop, setFiltroRamDesktop] = useState('');
-    const [filtroDiscoDesktop, setFiltroDiscoDesktop] = useState('');
-    // Filtros portátiles
-    const [filtroModeloLaptop, setFiltroModeloLaptop] = useState('');
-    const [filtroRamLaptop, setFiltroRamLaptop] = useState('');
-    const [filtroDiscoLaptop, setFiltroDiscoLaptop] = useState('');
   const [sortCol, setSortCol] = useState('hostname');
   const [sortAsc, setSortAsc] = useState(true);
   const [desktopPage, setDesktopPage] = useState(1);
@@ -94,21 +85,22 @@ export default function Computers() {
         );
         const allRooms = roomsNested.flat();
 
-        const cpuMap      = Object.fromEntries((cpus ?? []).map(c => [c.cpu_id,      c.model_name]));
+        const cpuMap      = Object.fromEntries((cpus ?? []).map(c => [c.cpu_id, c.model_name]));
+        const cpuScoreMap = Object.fromEntries((cpus ?? []).map(c => [c.cpu_id, c.benchmark_score]));
         const osMap       = Object.fromEntries((osList ?? []).map(o => [o.os_id,      o.name]));
         const equipMap    = Object.fromEntries((equip ?? []).map(e => [e.equipment_user_id, e.name]));
         const roomMap     = Object.fromEntries(allRooms.map(r => [r.room_id, `${r.centerName} › ${r.name}`]));
         const lmMap       = Object.fromEntries((lm ?? []).map(m => [m.laptop_model_id,  `${m.brand_name} ${m.model_name}`]));
         const dmMap       = Object.fromEntries((dm ?? []).map(m => [m.desktop_model_id, `${m.brand_name} ${m.model_name}`]));
 
-        const cpuOpts   = (cpus   ?? []).map(c => ({ value: c.cpu_id,              label: c.model_name }));
+        const cpuOpts   = (cpus   ?? []).map(c => ({ value: c.cpu_id, label: c.benchmark_score ? `${c.model_name} (${c.benchmark_score})` : c.model_name }));
         const osOpts    = (osList ?? []).map(o => ({ value: o.os_id,               label: o.name }));
         const equipOpts = (equip  ?? []).map(e => ({ value: e.equipment_user_id,   label: e.name }));
         const roomOpts  = allRooms.map(r => ({ value: r.room_id, label: `${r.centerName} › ${r.name}` }));
         const lmOpts    = (lm     ?? []).map(m => ({ value: m.laptop_model_id,     label: `${m.brand_name} ${m.model_name}` }));
         const dmOpts    = (dm     ?? []).map(m => ({ value: m.desktop_model_id,    label: `${m.brand_name} ${m.model_name}` }));
 
-        setRefs({ cpuMap, osMap, equipMap, roomMap, lmMap, dmMap, cpuOpts, osOpts, equipOpts, roomOpts, lmOpts, dmOpts });
+        setRefs({ cpuMap, cpuScoreMap, osMap, equipMap, roomMap, lmMap, dmMap, cpuOpts, osOpts, equipOpts, roomOpts, lmOpts, dmOpts });
         setDesktops(dt ?? []);
         setLaptops(lt ?? []);
       } catch (e) {
@@ -138,14 +130,8 @@ export default function Computers() {
 
   const q = query.trim().toLowerCase();
 
-  // Aplicar filtros sobremesas
-  let filteredDesktops = desktops;
-  if (filtroCpuDesktop) filteredDesktops = filteredDesktops.filter(d => d.cpu_id === filtroCpuDesktop);
-  if (filtroRamDesktop) filteredDesktops = filteredDesktops.filter(d => String(d.ram_gb) === filtroRamDesktop);
-  if (filtroDiscoDesktop) filteredDesktops = filteredDesktops.filter(d => String(d.storage_gb) === filtroDiscoDesktop);
   // Búsqueda texto sobremesas
-  filteredDesktops = q
-    ? filteredDesktops.filter(d => [
+  const filteredDesktops = !q ? desktops : desktops.filter(d => [
         d.hostname,
         R.roomMap[d.room_id],
         d.desktop_model_id ? R.dmMap[d.desktop_model_id] : null,
@@ -158,8 +144,7 @@ export default function Computers() {
         d.mac_address,
         d.equipment_user_id ? R.equipMap[d.equipment_user_id] : null,
         d.observations,
-      ].filter(Boolean).join(' ').toLowerCase().includes(q))
-    : filteredDesktops;
+      ].filter(Boolean).join(' ').toLowerCase().includes(q));
 
   // Ordenar
   const sortKeyMap = {
@@ -182,17 +167,12 @@ export default function Computers() {
 
 
   // Laptops: filtrado, orden y paginación
-  // Aplicar filtros portátiles
-  let filteredLaptops = laptops;
-  if (filtroModeloLaptop) filteredLaptops = filteredLaptops.filter(l => l.laptop_model_id === filtroModeloLaptop);
-  if (filtroRamLaptop) filteredLaptops = filteredLaptops.filter(l => String(l.ram_gb) === filtroRamLaptop);
-  if (filtroDiscoLaptop) filteredLaptops = filteredLaptops.filter(l => String(l.storage_gb) === filtroDiscoLaptop);
   // Búsqueda texto portátiles
-  filteredLaptops = q
-    ? filteredLaptops.filter(l => [
+  const filteredLaptops = !q ? laptops : laptops.filter(l => [
         l.hostname,
         R.roomMap[l.room_id],
         l.laptop_model_id ? R.lmMap[l.laptop_model_id] : null,
+        l.cpu_model_name,
         R.osMap[l.os_id],
         l.ram_gb != null ? `${l.ram_gb} GB` : null,
         l.ram_type,
@@ -202,13 +182,13 @@ export default function Computers() {
         l.serial_number,
         l.equipment_user_id ? R.equipMap[l.equipment_user_id] : null,
         l.observations,
-      ].filter(Boolean).join(' ').toLowerCase().includes(q))
-    : filteredLaptops;
+      ].filter(Boolean).join(' ').toLowerCase().includes(q));
 
   const laptopSortKeyMap = {
     hostname: l => l.hostname?.toLowerCase() ?? '',
     aula: l => R.roomMap[l.room_id]?.toLowerCase() ?? '',
     model: l => l.laptop_model_id ? R.lmMap[l.laptop_model_id]?.toLowerCase() : '',
+    cpu: l => l.cpu_benchmark_score ?? -1,
     so: l => R.osMap[l.os_id]?.toLowerCase() ?? '',
     ram: l => l.ram_gb ?? 0,
     storage: l => l.storage_gb ?? 0,
@@ -259,59 +239,28 @@ export default function Computers() {
       </div>
 
       {/* DESKTOPS */}
-      {/* DESKTOPS */}
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h1 className="page-title">🖥️ Sobretaules</h1>
-          <button className="btn btn-primary" onClick={() => navigate('/computers/new-desktop')}>
-            + Nou sobretaula
-          </button>
-        </div>
-        <div className="filters-bar">
-          <select value={filtroCpuDesktop} onChange={e => { setFiltroCpuDesktop(e.target.value); setDesktopPage(1); }} className="filter-select">
-            <option value="">CPU</option>
-            {R.cpuOpts?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-          <select value={filtroRamDesktop} onChange={e => { setFiltroRamDesktop(e.target.value); setDesktopPage(1); }} className="filter-select">
-            <option value="">RAM</option>
-            {[...new Set(desktops.map(d => d.ram_gb).filter(Boolean))].sort((a,b)=>a-b).map(ram => <option key={ram} value={ram}>{ram} GB</option>)}
-          </select>
-          <select value={filtroDiscoDesktop} onChange={e => { setFiltroDiscoDesktop(e.target.value); setDesktopPage(1); }} className="filter-select">
-            <option value="">Disco</option>
-            {[...new Set(desktops.map(d => d.storage_gb).filter(Boolean))].sort((a,b)=>a-b).map(disk => <option key={disk} value={disk}>{disk} GB</option>)}
-          </select>
-          <style>{`
-            .filters-bar {
-              display: flex;
-              align-items: center;
-              justify-content: flex-end;
-              gap: 16px;
-              background: #f7fafd;
-              border-radius: 10px;
-              padding: 10px 24px;
-              box-shadow: 0 1px 4px #0001;
-              margin: 16px 0 8px 0;
-              min-width: 320px;
-              max-width: 600px;
-              float: right;
-            }
-            .filter-select {
-              font-size: 15px;
-              border-radius: 6px;
-              border: 1px solid var(--border, #d0d7de);
-              padding: 8px 18px;
-              background: #fff;
-              min-width: 140px;
-              max-width: 180px;
-              box-shadow: 0 1px 2px #0001;
-              transition: border 0.2s;
-            }
-            .filter-select:focus {
-              outline: 2px solid #007bff33;
-              border-color: #007bff;
-            }
-          `}</style>
-        </div>
+      <style>{`
+        .filter-select {
+          font-size: 15px;
+          border-radius: 6px;
+          border: 1px solid var(--border, #d0d7de);
+          padding: 8px 18px;
+          background: #fff;
+          min-width: 140px;
+          max-width: 180px;
+          box-shadow: 0 1px 2px #0001;
+          transition: border 0.2s;
+        }
+        .filter-select:focus {
+          outline: 2px solid #007bff33;
+          border-color: #007bff;
+        }
+      `}</style>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+        <h1 className="page-title">🖥️ Sobretaules</h1>
+        <button className="btn btn-primary" onClick={() => navigate('/computers/new-desktop')}>
+          + Nou sobretaula
+        </button>
       </div>
 
       <div className="card" style={{ marginBottom: 32 }}>
@@ -418,27 +367,11 @@ export default function Computers() {
       </div>
 
       {/* LAPTOPS */}
-      <div className="page-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <h1 className="page-title">💻 Portàtils</h1>
-          <button className="btn btn-primary" onClick={() => navigate('/computers/new-laptop')}>
-            + Nou portàtil
-          </button>
-        </div>
-        <div className="filters-bar">
-          <select value={filtroModeloLaptop} onChange={e => { setFiltroModeloLaptop(e.target.value); setLaptopPage(1); }} className="filter-select">
-            <option value="">Modelo</option>
-            {R.lmOpts?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-          </select>
-          <select value={filtroRamLaptop} onChange={e => { setFiltroRamLaptop(e.target.value); setLaptopPage(1); }} className="filter-select">
-            <option value="">RAM</option>
-            {[...new Set(laptops.map(l => l.ram_gb).filter(Boolean))].sort((a,b)=>a-b).map(ram => <option key={ram} value={ram}>{ram} GB</option>)}
-          </select>
-          <select value={filtroDiscoLaptop} onChange={e => { setFiltroDiscoLaptop(e.target.value); setLaptopPage(1); }} className="filter-select">
-            <option value="">Disco</option>
-            {[...new Set(laptops.map(l => l.storage_gb).filter(Boolean))].sort((a,b)=>a-b).map(disk => <option key={disk} value={disk}>{disk} GB</option>)}
-          </select>
-        </div>
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+        <h1 className="page-title">💻 Portàtils</h1>
+        <button className="btn btn-primary" onClick={() => navigate('/computers/new-laptop')}>
+          + Nou portàtil
+        </button>
       </div>
 
       <div className="card">
@@ -458,6 +391,9 @@ export default function Computers() {
                     </th>
                     <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('model'); setSortAsc(sortCol === 'model' ? !sortAsc : true); }}>
                       Model {sortCol === 'model' && (sortAsc ? '▲' : '▼')}
+                    </th>
+                    <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('cpu'); setSortAsc(sortCol === 'cpu' ? !sortAsc : true); }}>
+                      CPU {sortCol === 'cpu' && (sortAsc ? '▲' : '▼')}
                     </th>
                     <th style={{ cursor: 'pointer' }} onClick={() => { setSortCol('so'); setSortAsc(sortCol === 'so' ? !sortAsc : true); }}>
                       SO {sortCol === 'so' && (sortAsc ? '▲' : '▼')}
@@ -486,6 +422,11 @@ export default function Computers() {
                       <td><strong>{l.hostname}</strong></td>
                       <td>{R.roomMap[l.room_id] ?? '—'}</td>
                       <td>{l.laptop_model_id ? R.lmMap[l.laptop_model_id] ?? '—' : '—'}</td>
+                      <td style={{ fontSize: 12 }}>
+                        {l.cpu_model_name
+                          ? <>{l.cpu_model_name}{l.cpu_benchmark_score != null && <span style={{ color: 'var(--muted)' }}> ({l.cpu_benchmark_score})</span>}</>
+                          : '—'}
+                      </td>
                       <td>{osEmoji(R.osMap[l.os_id])}</td>
                       <td>{ramLabel(l.ram_gb, l.ram_type)}</td>
                       <td>{storageLabel(l.storage_gb, l.storage_type)}</td>

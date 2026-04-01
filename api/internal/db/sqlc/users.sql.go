@@ -105,3 +105,19 @@ func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (UpdateU
 	err := row.Scan(&i.AppUserID, &i.Username, &i.RoleID)
 	return i, err
 }
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE app_user
+SET password_hash = $2
+WHERE app_user_id = $1
+`
+
+type UpdateUserPasswordParams struct {
+	AppUserID    int64  `json:"app_user_id"`
+	PasswordHash string `json:"password_hash"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.Exec(ctx, updateUserPassword, arg.AppUserID, arg.PasswordHash)
+	return err
+}
