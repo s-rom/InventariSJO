@@ -62,6 +62,10 @@ func (h *OSHandler) Update(w http.ResponseWriter, r *http.Request) {
 		Name: req.Name,
 	})
 	if err != nil {
+		if isNotFound(err) {
+			respondError(w, http.StatusNotFound, "os not found")
+			return
+		}
 		h.logger.Error("update os", "error", err, "id", id)
 		respondError(w, http.StatusInternalServerError, "internal error")
 		return
