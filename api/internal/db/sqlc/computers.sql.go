@@ -125,9 +125,9 @@ func (q *Queries) ListComputers(ctx context.Context) ([]ListComputersRow, error)
 const updateComputerBase = `-- name: UpdateComputerBase :one
 UPDATE computer
 SET
-    hostname     = COALESCE($1,     hostname),
-    room_id      = COALESCE($2,      room_id),
-    observations = COALESCE($3,  observations),
+    hostname     = COALESCE($1,  hostname),
+    room_id      = COALESCE($2,   room_id),
+    observations = $3,
     updated_at   = now()
 WHERE computer_id = $4
 RETURNING computer_id, hostname, room_id, observations, created_by_app_user_id, created_at, updated_at
