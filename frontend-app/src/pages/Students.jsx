@@ -400,6 +400,21 @@ function AssignmentsTab() {
   const selectedClass = classes.find(c => c.class_id === classId);
   const assignedCount = students.filter(s => assignmentByStudent[s.student_id]).length;
 
+  function exportCSV() {
+    const rows = assignments.map(a => [a.student_name, a.hostname]);
+    const csv  = ['Alumne,Equip', ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const cls  = selectedClass
+      ? `${selectedClass.course}${selectedClass.class_label}`
+      : 'classe';
+    a.href     = url;
+    a.download = `assignacions_${cls}_${selectedYear}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div>
       <div className="filter-bar">
@@ -437,6 +452,11 @@ function AssignmentsTab() {
             }{selectedClass.course}r {selectedClass.class_label}
             {' · '}<strong>{assignedCount}</strong>/{students.length} assignats
           </div>
+        )}
+        {assignments.length > 0 && (
+          <button className="btn btn-ghost btn-sm" onClick={exportCSV} style={{ marginLeft: 'auto' }}>
+            📥 Exportar CSV
+          </button>
         )}
       </div>
 

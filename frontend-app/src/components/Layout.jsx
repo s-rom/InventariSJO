@@ -175,6 +175,13 @@ export default function Layout({ children, onLogout, role, username }) {
                 </div>
               )}
               <button
+                className="btn btn-sm"
+                style={{ width: '100%', justifyContent: 'center', background: 'transparent', border: '1px solid var(--danger, #dc2626)', color: 'var(--danger, #dc2626)', marginBottom: 6 }}
+                onClick={() => setShowChgPwd(true)}
+              >
+                Canviar contrasenya
+              </button>
+              <button
                 className="btn btn-ghost btn-sm"
                 style={{ width: '100%', justifyContent: 'center' }}
                 onClick={onLogout}
