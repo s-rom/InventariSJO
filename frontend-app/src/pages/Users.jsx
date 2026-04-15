@@ -18,6 +18,13 @@ export default function Users() {
   // Confirm-delete state
   const [delId, setDelId] = useState(null);
 
+  // Change-password form state
+  const EMPTY_PWD = { current: '', next: '', confirm: '' };
+  const [pwd,        setPwd]        = useState(EMPTY_PWD);
+  const [pwdSaving,  setPwdSaving]  = useState(false);
+  const [pwdErr,     setPwdErr]     = useState('');
+  const [pwdSuccess, setPwdSuccess] = useState(false);
+
   const load = useCallback(async () => {
     try {
       const [u, r] = await Promise.all([api.listUsers(), api.listRoles()]);
@@ -60,6 +67,26 @@ export default function Users() {
       setDelId(null);
       load();
     } catch (ex) { setErr(ex.message); }
+  }
+
+  async function handleChangePassword(e) {
+    e.preventDefault();
+    setPwdErr(''); setPwdSuccess(false);
+    if (pwd.next !== pwd.confirm) {
+      setPwdErr('Les contrasenyes noves no coincideixen.');
+      return;
+    }
+    if (pwd.next.length < 8) {
+      setPwdErr('La nova contrasenya ha de tenir almenys 8 caràcters.');
+      return;
+    }
+    setPwdSaving(true);
+    try {
+      await api.changePassword({ current_password: pwd.current, new_password: pwd.next });
+      setPwd(EMPTY_PWD);
+      setPwdSuccess(true);
+    } catch (ex) { setPwdErr(ex.message); }
+    finally { setPwdSaving(false); }
   }
 
   return (
@@ -177,6 +204,58 @@ export default function Users() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* ── Change password ──────────────────────────────────────── */}
+      <div className="card" style={{ marginTop: 24 }}>
+        <h2 style={{ fontSize: 15, fontWeight: 600, marginBottom: 14 }}>Canviar contrasenya</h2>
+        <form onSubmit={handleChangePassword} className="form-panel">
+          <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr 1fr auto' }}>
+            <div className="form-group">
+              <label>Contrasenya actual *</label>
+              <input
+                type="password"
+                value={pwd.current}
+                onChange={e => { setPwdErr(''); setPwdSuccess(false); setPwd(p => ({ ...p, current: e.target.value })); }}
+                required
+                autoComplete="current-password"
+              />
+            </div>
+            <div className="form-group">
+              <label>Nova contrasenya *</label>
+              <input
+                type="password"
+                value={pwd.next}
+                onChange={e => { setPwdErr(''); setPwdSuccess(false); setPwd(p => ({ ...p, next: e.target.value })); }}
+                required
+                autoComplete="new-password"
+                placeholder="Mínim 8 caràcters"
+              />
+            </div>
+            <div className="form-group">
+              <label>Confirmar nova *</label>
+              <input
+                type="password"
+                value={pwd.confirm}
+                onChange={e => { setPwdErr(''); setPwdSuccess(false); setPwd(p => ({ ...p, confirm: e.target.value })); }}
+                required
+                autoComplete="new-password"
+              />
+            </div>
+            <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+              <label style={{ visibility: 'hidden' }}>_</label>
+              <button
+                type="submit"
+                className="btn btn-primary"
+                disabled={pwdSaving || !pwd.current || !pwd.next || !pwd.confirm}
+              >
+                {pwdSaving ? '…' : 'Canviar'}
+              </button>
+            </div>
+          </div>
+          {pwdErr     && <div className="error-msg">{pwdErr}</div>}
+          {pwdSuccess && <div style={{ marginTop: 8, fontSize: 13, color: 'var(--success, #16a34a)' }}>Contrasenya actualitzada correctament.</div>}
+        </form>
       </div>
     </div>
   );
