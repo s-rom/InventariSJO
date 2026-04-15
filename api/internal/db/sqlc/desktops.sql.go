@@ -15,26 +15,27 @@ const createDesktop = `-- name: CreateDesktop :one
 INSERT INTO desktop (
     computer_id, desktop_model_id, cpu_id,
     ram_gb, ram_type, storage_gb, storage_type,
-    os_id, equipment_user_id, has_wifi_card, mac_address
+    os_id, equipment_user_id, has_wifi_card, mac_address, network_connection
 ) VALUES (
     $1, $2, $3,
     $4, $5, $6, $7,
-    $8, $9, $10, $11
-) RETURNING computer_id, desktop_model_id, cpu_id, ram_gb, ram_type, storage_gb, storage_type, os_id, equipment_user_id, has_wifi_card, mac_address
+    $8, $9, $10, $11, $12
+) RETURNING computer_id, desktop_model_id, cpu_id, ram_gb, ram_type, storage_gb, storage_type, os_id, equipment_user_id, has_wifi_card, mac_address, network_connection
 `
 
 type CreateDesktopParams struct {
-	ComputerID      int64               `json:"computer_id"`
-	DesktopModelID  pgtype.Int8         `json:"desktop_model_id"`
-	CpuID           pgtype.Int8         `json:"cpu_id"`
-	RamGb           pgtype.Int4         `json:"ram_gb"`
-	RamType         NullRamTypeEnum     `json:"ram_type"`
-	StorageGb       pgtype.Int4         `json:"storage_gb"`
-	StorageType     NullStorageTypeEnum `json:"storage_type"`
-	OsID            pgtype.Int8         `json:"os_id"`
-	EquipmentUserID pgtype.Int8         `json:"equipment_user_id"`
-	HasWifiCard     bool                `json:"has_wifi_card"`
-	MacAddress      pgtype.Text         `json:"mac_address"`
+	ComputerID        int64                  `json:"computer_id"`
+	DesktopModelID    pgtype.Int8            `json:"desktop_model_id"`
+	CpuID             pgtype.Int8            `json:"cpu_id"`
+	RamGb             pgtype.Int4            `json:"ram_gb"`
+	RamType           NullRamTypeEnum        `json:"ram_type"`
+	StorageGb         pgtype.Int4            `json:"storage_gb"`
+	StorageType       NullStorageTypeEnum    `json:"storage_type"`
+	OsID              pgtype.Int8            `json:"os_id"`
+	EquipmentUserID   pgtype.Int8            `json:"equipment_user_id"`
+	HasWifiCard       bool                   `json:"has_wifi_card"`
+	MacAddress        pgtype.Text            `json:"mac_address"`
+	NetworkConnection NullConnectionTypeEnum `json:"network_connection"`
 }
 
 func (q *Queries) CreateDesktop(ctx context.Context, arg CreateDesktopParams) (Desktop, error) {
@@ -50,6 +51,7 @@ func (q *Queries) CreateDesktop(ctx context.Context, arg CreateDesktopParams) (D
 		arg.EquipmentUserID,
 		arg.HasWifiCard,
 		arg.MacAddress,
+		arg.NetworkConnection,
 	)
 	var i Desktop
 	err := row.Scan(
@@ -64,6 +66,7 @@ func (q *Queries) CreateDesktop(ctx context.Context, arg CreateDesktopParams) (D
 		&i.EquipmentUserID,
 		&i.HasWifiCard,
 		&i.MacAddress,
+		&i.NetworkConnection,
 	)
 	return i, err
 }
@@ -79,7 +82,7 @@ SELECT
     COALESCE(d.storage_gb,   CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_storage_gb   END) AS storage_gb,
     COALESCE(d.storage_type, CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_storage_type END) AS storage_type,
     COALESCE(d.os_id,        CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_os_id        END) AS os_id,
-    d.equipment_user_id, d.has_wifi_card, d.mac_address
+    d.equipment_user_id, d.has_wifi_card, d.mac_address, d.network_connection
 FROM computer c
 INNER JOIN desktop d ON d.computer_id = c.computer_id
 LEFT JOIN desktop_model dm ON dm.desktop_model_id = d.desktop_model_id
@@ -87,23 +90,24 @@ WHERE c.computer_id = $1
 `
 
 type GetDesktopRow struct {
-	ComputerID         int64               `json:"computer_id"`
-	Hostname           string              `json:"hostname"`
-	RoomID             pgtype.Int8         `json:"room_id"`
-	Observations       pgtype.Text         `json:"observations"`
-	CreatedByAppUserID int64               `json:"created_by_app_user_id"`
-	CreatedAt          pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz  `json:"updated_at"`
-	DesktopModelID     pgtype.Int8         `json:"desktop_model_id"`
-	CpuID              pgtype.Int8         `json:"cpu_id"`
-	RamGb              pgtype.Int4         `json:"ram_gb"`
-	RamType            NullRamTypeEnum     `json:"ram_type"`
-	StorageGb          pgtype.Int4         `json:"storage_gb"`
-	StorageType        NullStorageTypeEnum `json:"storage_type"`
-	OsID               pgtype.Int8         `json:"os_id"`
-	EquipmentUserID    pgtype.Int8         `json:"equipment_user_id"`
-	HasWifiCard        bool                `json:"has_wifi_card"`
-	MacAddress         pgtype.Text         `json:"mac_address"`
+	ComputerID         int64                  `json:"computer_id"`
+	Hostname           string                 `json:"hostname"`
+	RoomID             pgtype.Int8            `json:"room_id"`
+	Observations       pgtype.Text            `json:"observations"`
+	CreatedByAppUserID int64                  `json:"created_by_app_user_id"`
+	CreatedAt          pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz     `json:"updated_at"`
+	DesktopModelID     pgtype.Int8            `json:"desktop_model_id"`
+	CpuID              pgtype.Int8            `json:"cpu_id"`
+	RamGb              pgtype.Int4            `json:"ram_gb"`
+	RamType            NullRamTypeEnum        `json:"ram_type"`
+	StorageGb          pgtype.Int4            `json:"storage_gb"`
+	StorageType        NullStorageTypeEnum    `json:"storage_type"`
+	OsID               pgtype.Int8            `json:"os_id"`
+	EquipmentUserID    pgtype.Int8            `json:"equipment_user_id"`
+	HasWifiCard        bool                   `json:"has_wifi_card"`
+	MacAddress         pgtype.Text            `json:"mac_address"`
+	NetworkConnection  NullConnectionTypeEnum `json:"network_connection"`
 }
 
 func (q *Queries) GetDesktop(ctx context.Context, computerID int64) (GetDesktopRow, error) {
@@ -127,6 +131,7 @@ func (q *Queries) GetDesktop(ctx context.Context, computerID int64) (GetDesktopR
 		&i.EquipmentUserID,
 		&i.HasWifiCard,
 		&i.MacAddress,
+		&i.NetworkConnection,
 	)
 	return i, err
 }
@@ -142,7 +147,7 @@ SELECT
     COALESCE(d.storage_gb,   CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_storage_gb   END) AS storage_gb,
     COALESCE(d.storage_type, CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_storage_type END) AS storage_type,
     COALESCE(d.os_id,        CASE WHEN dm.desktop_model_id IS NOT NULL THEN dm.base_os_id        END) AS os_id,
-    d.equipment_user_id, d.has_wifi_card, d.mac_address
+    d.equipment_user_id, d.has_wifi_card, d.mac_address, d.network_connection
 FROM computer c
 INNER JOIN desktop d ON d.computer_id = c.computer_id
 LEFT JOIN desktop_model dm ON dm.desktop_model_id = d.desktop_model_id
@@ -150,23 +155,24 @@ ORDER BY c.computer_id
 `
 
 type ListDesktopsRow struct {
-	ComputerID         int64               `json:"computer_id"`
-	Hostname           string              `json:"hostname"`
-	RoomID             pgtype.Int8         `json:"room_id"`
-	Observations       pgtype.Text         `json:"observations"`
-	CreatedByAppUserID int64               `json:"created_by_app_user_id"`
-	CreatedAt          pgtype.Timestamptz  `json:"created_at"`
-	UpdatedAt          pgtype.Timestamptz  `json:"updated_at"`
-	DesktopModelID     pgtype.Int8         `json:"desktop_model_id"`
-	CpuID              pgtype.Int8         `json:"cpu_id"`
-	RamGb              pgtype.Int4         `json:"ram_gb"`
-	RamType            NullRamTypeEnum     `json:"ram_type"`
-	StorageGb          pgtype.Int4         `json:"storage_gb"`
-	StorageType        NullStorageTypeEnum `json:"storage_type"`
-	OsID               pgtype.Int8         `json:"os_id"`
-	EquipmentUserID    pgtype.Int8         `json:"equipment_user_id"`
-	HasWifiCard        bool                `json:"has_wifi_card"`
-	MacAddress         pgtype.Text         `json:"mac_address"`
+	ComputerID         int64                  `json:"computer_id"`
+	Hostname           string                 `json:"hostname"`
+	RoomID             pgtype.Int8            `json:"room_id"`
+	Observations       pgtype.Text            `json:"observations"`
+	CreatedByAppUserID int64                  `json:"created_by_app_user_id"`
+	CreatedAt          pgtype.Timestamptz     `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz     `json:"updated_at"`
+	DesktopModelID     pgtype.Int8            `json:"desktop_model_id"`
+	CpuID              pgtype.Int8            `json:"cpu_id"`
+	RamGb              pgtype.Int4            `json:"ram_gb"`
+	RamType            NullRamTypeEnum        `json:"ram_type"`
+	StorageGb          pgtype.Int4            `json:"storage_gb"`
+	StorageType        NullStorageTypeEnum    `json:"storage_type"`
+	OsID               pgtype.Int8            `json:"os_id"`
+	EquipmentUserID    pgtype.Int8            `json:"equipment_user_id"`
+	HasWifiCard        bool                   `json:"has_wifi_card"`
+	MacAddress         pgtype.Text            `json:"mac_address"`
+	NetworkConnection  NullConnectionTypeEnum `json:"network_connection"`
 }
 
 func (q *Queries) ListDesktops(ctx context.Context) ([]ListDesktopsRow, error) {
@@ -196,6 +202,7 @@ func (q *Queries) ListDesktops(ctx context.Context) ([]ListDesktopsRow, error) {
 			&i.EquipmentUserID,
 			&i.HasWifiCard,
 			&i.MacAddress,
+			&i.NetworkConnection,
 		); err != nil {
 			return nil, err
 		}
@@ -210,32 +217,34 @@ func (q *Queries) ListDesktops(ctx context.Context) ([]ListDesktopsRow, error) {
 const updateDesktop = `-- name: UpdateDesktop :one
 UPDATE desktop
 SET
-    desktop_model_id  = COALESCE($1,  desktop_model_id),
-    cpu_id            = COALESCE($2,            cpu_id),
-    ram_gb            = COALESCE($3,            ram_gb),
-    ram_type          = COALESCE($4,          ram_type),
-    storage_gb        = COALESCE($5,        storage_gb),
-    storage_type      = COALESCE($6,      storage_type),
-    os_id             = COALESCE($7,             os_id),
-    equipment_user_id = COALESCE($8, equipment_user_id),
-    has_wifi_card     = COALESCE($9,     has_wifi_card),
-    mac_address       = COALESCE($10,       mac_address)
-WHERE computer_id = $11
-RETURNING computer_id, desktop_model_id, cpu_id, ram_gb, ram_type, storage_gb, storage_type, os_id, equipment_user_id, has_wifi_card, mac_address
+    desktop_model_id   = COALESCE($1,   desktop_model_id),
+    cpu_id             = COALESCE($2,             cpu_id),
+    ram_gb             = COALESCE($3,             ram_gb),
+    ram_type           = COALESCE($4,           ram_type),
+    storage_gb         = COALESCE($5,         storage_gb),
+    storage_type       = COALESCE($6,       storage_type),
+    os_id              = COALESCE($7,              os_id),
+    equipment_user_id  = COALESCE($8,  equipment_user_id),
+    has_wifi_card      = COALESCE($9,      has_wifi_card),
+    mac_address        = COALESCE($10,        mac_address),
+    network_connection = COALESCE($11, network_connection)
+WHERE computer_id = $12
+RETURNING computer_id, desktop_model_id, cpu_id, ram_gb, ram_type, storage_gb, storage_type, os_id, equipment_user_id, has_wifi_card, mac_address, network_connection
 `
 
 type UpdateDesktopParams struct {
-	DesktopModelID  pgtype.Int8         `json:"desktop_model_id"`
-	CpuID           pgtype.Int8         `json:"cpu_id"`
-	RamGb           pgtype.Int4         `json:"ram_gb"`
-	RamType         NullRamTypeEnum     `json:"ram_type"`
-	StorageGb       pgtype.Int4         `json:"storage_gb"`
-	StorageType     NullStorageTypeEnum `json:"storage_type"`
-	OsID            pgtype.Int8         `json:"os_id"`
-	EquipmentUserID pgtype.Int8         `json:"equipment_user_id"`
-	HasWifiCard     pgtype.Bool         `json:"has_wifi_card"`
-	MacAddress      pgtype.Text         `json:"mac_address"`
-	ComputerID      int64               `json:"computer_id"`
+	DesktopModelID    pgtype.Int8            `json:"desktop_model_id"`
+	CpuID             pgtype.Int8            `json:"cpu_id"`
+	RamGb             pgtype.Int4            `json:"ram_gb"`
+	RamType           NullRamTypeEnum        `json:"ram_type"`
+	StorageGb         pgtype.Int4            `json:"storage_gb"`
+	StorageType       NullStorageTypeEnum    `json:"storage_type"`
+	OsID              pgtype.Int8            `json:"os_id"`
+	EquipmentUserID   pgtype.Int8            `json:"equipment_user_id"`
+	HasWifiCard       pgtype.Bool            `json:"has_wifi_card"`
+	MacAddress        pgtype.Text            `json:"mac_address"`
+	NetworkConnection NullConnectionTypeEnum `json:"network_connection"`
+	ComputerID        int64                  `json:"computer_id"`
 }
 
 func (q *Queries) UpdateDesktop(ctx context.Context, arg UpdateDesktopParams) (Desktop, error) {
@@ -250,6 +259,7 @@ func (q *Queries) UpdateDesktop(ctx context.Context, arg UpdateDesktopParams) (D
 		arg.EquipmentUserID,
 		arg.HasWifiCard,
 		arg.MacAddress,
+		arg.NetworkConnection,
 		arg.ComputerID,
 	)
 	var i Desktop
@@ -265,6 +275,7 @@ func (q *Queries) UpdateDesktop(ctx context.Context, arg UpdateDesktopParams) (D
 		&i.EquipmentUserID,
 		&i.HasWifiCard,
 		&i.MacAddress,
+		&i.NetworkConnection,
 	)
 	return i, err
 }

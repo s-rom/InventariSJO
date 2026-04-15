@@ -4,9 +4,10 @@
 -- 'None' = genuïnament sense RAM/disc (p.ex. equip al taller sense memoria)
 -- NULL   = no modificat respecte al model base (laptop_model / desktop_model)
 -- Ambdós valors s'utilitzen en contextos diferents; veure comentaris de desktop i laptop.
-CREATE TYPE ram_type_enum       AS ENUM ('DDR3', 'DDR4', 'DDR5', 'None');
-CREATE TYPE storage_type_enum   AS ENUM ('HDD', 'SSD', 'NVMe', 'None');
-CREATE TYPE audit_event_enum    AS ENUM ('created', 'updated', 'deleted');
+CREATE TYPE ram_type_enum        AS ENUM ('DDR3', 'DDR4', 'DDR5', 'None');
+CREATE TYPE storage_type_enum    AS ENUM ('HDD', 'SSD', 'NVMe', 'None');
+CREATE TYPE audit_event_enum     AS ENUM ('created', 'updated', 'deleted');
+CREATE TYPE connection_type_enum AS ENUM ('ethernet', 'wifi');
 
 -- Torn per als portàtils d'alumnes: matí o tarda
 CREATE TYPE shift_enum AS ENUM ('morning', 'afternoon');
@@ -176,8 +177,11 @@ CREATE TABLE desktop (
     equipment_user_id BIGINT REFERENCES equipment_user (equipment_user_id) ON DELETE SET NULL,
 
     -- Targeta de xarxa wifi addicional: MAC s'apunta quan n'hi ha
-    has_wifi_card     BOOLEAN NOT NULL DEFAULT FALSE,
-    mac_address       TEXT UNIQUE DEFAULT NULL,
+    has_wifi_card        BOOLEAN NOT NULL DEFAULT FALSE,
+    mac_address          TEXT UNIQUE DEFAULT NULL,
+
+    -- Tipus de connexió de xarxa activa a la ubicació de l'equip
+    network_connection   connection_type_enum DEFAULT NULL,
 
     CONSTRAINT desktop_wifi_mac_check CHECK (
         has_wifi_card = TRUE OR mac_address IS NULL

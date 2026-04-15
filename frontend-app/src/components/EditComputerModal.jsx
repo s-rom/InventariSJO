@@ -16,7 +16,16 @@ const STORAGE_TYPES = ['HDD', 'SSD', 'NVMe', 'None'];
  *   onClose : () => void
  */
 export default function EditComputerModal({ item, type, refs, onSave, onClose }) {
-  const [form, setForm]     = useState({ ...item });
+  const [form, setForm]     = useState(() => {
+    // network_connection can arrive as a plain string (new API) or as
+    // {connection_type_enum, valid} (old binary without MarshalJSON override).
+    // Normalize to plain string | null so the <select> always works.
+    const nc = item.network_connection;
+    const normalizedNc = nc == null ? null
+      : typeof nc === 'string' ? nc
+      : nc.connection_type_enum || null;
+    return { ...item, network_connection: normalizedNc };
+  });
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
 
@@ -50,9 +59,10 @@ export default function EditComputerModal({ item, type, refs, onSave, onClose })
       if (type === 'desktop') {
         updated = await api.updateDesktop(item.computer_id, {
           ...base,
-          desktop_model_id: form.desktop_model_id || null,
-          cpu_id:           form.cpu_id            || null,
-          has_wifi_card:    form.has_wifi_card,
+          desktop_model_id:  form.desktop_model_id  || null,
+          cpu_id:            form.cpu_id             || null,
+          has_wifi_card:     form.has_wifi_card,
+          network_connection: form.network_connection || null,
         });
       } else {
         updated = await api.updateLaptop(item.computer_id, {
@@ -251,6 +261,21 @@ export default function EditComputerModal({ item, type, refs, onSave, onClose })
                   onChange={e => set('has_wifi_card', e.target.checked)}
                 />
                 <label htmlFor="edit-wifi" style={{ margin: 0 }}>Té targeta WiFi</label>
+              </div>
+            )}
+
+            {/* Connexió de xarxa (desktop only) */}
+            {type === 'desktop' && (
+              <div className="form-group">
+                <label>Connexió de xarxa</label>
+                <select
+                  value={form.network_connection ?? ''}
+                  onChange={e => set('network_connection', e.target.value || null)}
+                >
+                  <option value="">—</option>
+                  <option value="ethernet">Ethernet (cablejat)</option>
+                  <option value="wifi">WiFi (sense fil)</option>
+                </select>
               </div>
             )}
 

@@ -55,19 +55,20 @@ func (h *DesktopsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	user := currentUser(r)
 
 	var req struct {
-		Hostname        string  `json:"hostname"`
-		RoomID          *int64  `json:"room_id"`
-		Observations    *string `json:"observations"`
-		DesktopModelID  *int64  `json:"desktop_model_id"`
-		CpuID           *int64  `json:"cpu_id"`
-		RamGb           *int32  `json:"ram_gb"`
-		RamType         *string `json:"ram_type"`
-		StorageGb       *int32  `json:"storage_gb"`
-		StorageType     *string `json:"storage_type"`
-		OsID            *int64  `json:"os_id"`
-		EquipmentUserID *int64  `json:"equipment_user_id"`
-		HasWifiCard     bool    `json:"has_wifi_card"`
-		MacAddress      *string `json:"mac_address"`
+		Hostname          string  `json:"hostname"`
+		RoomID            *int64  `json:"room_id"`
+		Observations      *string `json:"observations"`
+		DesktopModelID    *int64  `json:"desktop_model_id"`
+		CpuID             *int64  `json:"cpu_id"`
+		RamGb             *int32  `json:"ram_gb"`
+		RamType           *string `json:"ram_type"`
+		StorageGb         *int32  `json:"storage_gb"`
+		StorageType       *string `json:"storage_type"`
+		OsID              *int64  `json:"os_id"`
+		EquipmentUserID   *int64  `json:"equipment_user_id"`
+		HasWifiCard       bool    `json:"has_wifi_card"`
+		MacAddress        *string `json:"mac_address"`
+		NetworkConnection *string `json:"network_connection"`
 	}
 	if err := decodeJSON(r, &req); err != nil || req.Hostname == "" {
 		respondError(w, http.StatusBadRequest, "hostname required")
@@ -81,6 +82,10 @@ func (h *DesktopsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var storType dbsqlc.NullStorageTypeEnum
 	if req.StorageType != nil {
 		storType = dbsqlc.NullStorageTypeEnum{StorageTypeEnum: dbsqlc.StorageTypeEnum(*req.StorageType), Valid: true}
+	}
+	var netConn dbsqlc.NullConnectionTypeEnum
+	if req.NetworkConnection != nil {
+		netConn = dbsqlc.NullConnectionTypeEnum{ConnectionTypeEnum: dbsqlc.ConnectionTypeEnum(*req.NetworkConnection), Valid: true}
 	}
 
 	tx, err := h.pool.Begin(r.Context())
@@ -105,17 +110,18 @@ func (h *DesktopsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	desktop, err := qtx.CreateDesktop(r.Context(), dbsqlc.CreateDesktopParams{
-		ComputerID:      computer.ComputerID,
-		DesktopModelID:  toPgInt8(req.DesktopModelID),
-		CpuID:           toPgInt8(req.CpuID),
-		RamGb:           toPgInt4(req.RamGb),
-		RamType:         ramType,
-		StorageGb:       toPgInt4(req.StorageGb),
-		StorageType:     storType,
-		OsID:            toPgInt8(req.OsID),
-		EquipmentUserID: toPgInt8(req.EquipmentUserID),
-		HasWifiCard:     req.HasWifiCard,
-		MacAddress:      toPgText(req.MacAddress),
+		ComputerID:        computer.ComputerID,
+		DesktopModelID:    toPgInt8(req.DesktopModelID),
+		CpuID:             toPgInt8(req.CpuID),
+		RamGb:             toPgInt4(req.RamGb),
+		RamType:           ramType,
+		StorageGb:         toPgInt4(req.StorageGb),
+		StorageType:       storType,
+		OsID:              toPgInt8(req.OsID),
+		EquipmentUserID:   toPgInt8(req.EquipmentUserID),
+		HasWifiCard:       req.HasWifiCard,
+		MacAddress:        toPgText(req.MacAddress),
+		NetworkConnection: netConn,
 	})
 	if err != nil {
 		h.logger.Error("create desktop", "error", err)
@@ -157,19 +163,20 @@ func (h *DesktopsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	user := currentUser(r)
 
 	var req struct {
-		Hostname        *string `json:"hostname"`
-		RoomID          *int64  `json:"room_id"`
-		Observations    *string `json:"observations"`
-		DesktopModelID  *int64  `json:"desktop_model_id"`
-		CpuID           *int64  `json:"cpu_id"`
-		RamGb           *int32  `json:"ram_gb"`
-		RamType         *string `json:"ram_type"`
-		StorageGb       *int32  `json:"storage_gb"`
-		StorageType     *string `json:"storage_type"`
-		OsID            *int64  `json:"os_id"`
-		EquipmentUserID *int64  `json:"equipment_user_id"`
-		HasWifiCard     *bool   `json:"has_wifi_card"`
-		MacAddress      *string `json:"mac_address"`
+		Hostname          *string `json:"hostname"`
+		RoomID            *int64  `json:"room_id"`
+		Observations      *string `json:"observations"`
+		DesktopModelID    *int64  `json:"desktop_model_id"`
+		CpuID             *int64  `json:"cpu_id"`
+		RamGb             *int32  `json:"ram_gb"`
+		RamType           *string `json:"ram_type"`
+		StorageGb         *int32  `json:"storage_gb"`
+		StorageType       *string `json:"storage_type"`
+		OsID              *int64  `json:"os_id"`
+		EquipmentUserID   *int64  `json:"equipment_user_id"`
+		HasWifiCard       *bool   `json:"has_wifi_card"`
+		MacAddress        *string `json:"mac_address"`
+		NetworkConnection *string `json:"network_connection"`
 	}
 	if err := decodeJSON(r, &req); err != nil {
 		respondError(w, http.StatusBadRequest, "invalid request body")
@@ -183,6 +190,10 @@ func (h *DesktopsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var storType dbsqlc.NullStorageTypeEnum
 	if req.StorageType != nil {
 		storType = dbsqlc.NullStorageTypeEnum{StorageTypeEnum: dbsqlc.StorageTypeEnum(*req.StorageType), Valid: true}
+	}
+	var netConn dbsqlc.NullConnectionTypeEnum
+	if req.NetworkConnection != nil {
+		netConn = dbsqlc.NullConnectionTypeEnum{ConnectionTypeEnum: dbsqlc.ConnectionTypeEnum(*req.NetworkConnection), Valid: true}
 	}
 
 	tx, err := h.pool.Begin(r.Context())
@@ -216,17 +227,18 @@ func (h *DesktopsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	updated, err := qtx.UpdateDesktop(r.Context(), dbsqlc.UpdateDesktopParams{
-		ComputerID:      id,
-		DesktopModelID:  toPgInt8(req.DesktopModelID),
-		CpuID:           toPgInt8(req.CpuID),
-		RamGb:           toPgInt4(req.RamGb),
-		RamType:         ramType,
-		StorageGb:       toPgInt4(req.StorageGb),
-		StorageType:     storType,
-		OsID:            toPgInt8(req.OsID),
-		EquipmentUserID: toPgInt8(req.EquipmentUserID),
-		HasWifiCard:     toPgBool(req.HasWifiCard),
-		MacAddress:      toPgText(req.MacAddress),
+		ComputerID:        id,
+		DesktopModelID:    toPgInt8(req.DesktopModelID),
+		CpuID:             toPgInt8(req.CpuID),
+		RamGb:             toPgInt4(req.RamGb),
+		RamType:           ramType,
+		StorageGb:         toPgInt4(req.StorageGb),
+		StorageType:       storType,
+		OsID:              toPgInt8(req.OsID),
+		EquipmentUserID:   toPgInt8(req.EquipmentUserID),
+		HasWifiCard:       toPgBool(req.HasWifiCard),
+		MacAddress:        toPgText(req.MacAddress),
+		NetworkConnection: netConn,
 	})
 	if err != nil {
 		h.logger.Error("update desktop", "error", err, "id", id)

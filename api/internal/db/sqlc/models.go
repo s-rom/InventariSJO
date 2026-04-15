@@ -54,6 +54,48 @@ func (ns NullAuditEventEnum) Value() (driver.Value, error) {
 	return string(ns.AuditEventEnum), nil
 }
 
+type ConnectionTypeEnum string
+
+const (
+	ConnectionTypeEnumEthernet ConnectionTypeEnum = "ethernet"
+	ConnectionTypeEnumWifi     ConnectionTypeEnum = "wifi"
+)
+
+func (e *ConnectionTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = ConnectionTypeEnum(s)
+	case string:
+		*e = ConnectionTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for ConnectionTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullConnectionTypeEnum struct {
+	ConnectionTypeEnum ConnectionTypeEnum `json:"connection_type_enum"`
+	Valid              bool               `json:"valid"` // Valid is true if ConnectionTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullConnectionTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.ConnectionTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.ConnectionTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullConnectionTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.ConnectionTypeEnum), nil
+}
+
 type RamTypeEnum string
 
 const (
@@ -235,17 +277,18 @@ type Cycle struct {
 }
 
 type Desktop struct {
-	ComputerID      int64               `json:"computer_id"`
-	DesktopModelID  pgtype.Int8         `json:"desktop_model_id"`
-	CpuID           pgtype.Int8         `json:"cpu_id"`
-	RamGb           pgtype.Int4         `json:"ram_gb"`
-	RamType         NullRamTypeEnum     `json:"ram_type"`
-	StorageGb       pgtype.Int4         `json:"storage_gb"`
-	StorageType     NullStorageTypeEnum `json:"storage_type"`
-	OsID            pgtype.Int8         `json:"os_id"`
-	EquipmentUserID pgtype.Int8         `json:"equipment_user_id"`
-	HasWifiCard     bool                `json:"has_wifi_card"`
-	MacAddress      pgtype.Text         `json:"mac_address"`
+	ComputerID        int64                  `json:"computer_id"`
+	DesktopModelID    pgtype.Int8            `json:"desktop_model_id"`
+	CpuID             pgtype.Int8            `json:"cpu_id"`
+	RamGb             pgtype.Int4            `json:"ram_gb"`
+	RamType           NullRamTypeEnum        `json:"ram_type"`
+	StorageGb         pgtype.Int4            `json:"storage_gb"`
+	StorageType       NullStorageTypeEnum    `json:"storage_type"`
+	OsID              pgtype.Int8            `json:"os_id"`
+	EquipmentUserID   pgtype.Int8            `json:"equipment_user_id"`
+	HasWifiCard       bool                   `json:"has_wifi_card"`
+	MacAddress        pgtype.Text            `json:"mac_address"`
+	NetworkConnection NullConnectionTypeEnum `json:"network_connection"`
 }
 
 type DesktopModel struct {

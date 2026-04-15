@@ -8,19 +8,20 @@ const RAM_TYPES     = ['DDR3', 'DDR4', 'DDR5', 'None'];
 const STORAGE_TYPES = ['HDD', 'SSD', 'NVMe', 'None'];
 
 const EMPTY = {
-  hostname:         '',
-  room_id:          null,
-  desktop_model_id: null,
-  cpu_id:           null,
-  os_id:            null,
-  ram_gb:           '',
-  ram_type:         '',
-  storage_gb:       '',
-  storage_type:     '',
-  has_wifi_card:    false,
-  mac_address:      '',
+  hostname:          '',
+  room_id:           null,
+  desktop_model_id:  null,
+  cpu_id:            null,
+  os_id:             null,
+  ram_gb:            '',
+  ram_type:          '',
+  storage_gb:        '',
+  storage_type:      '',
+  has_wifi_card:     false,
+  mac_address:       '',
+  network_connection: null,
   equipment_user_id: null,
-  observations:     '',
+  observations:      '',
 };
 
 export default function NewDesktop() {
@@ -100,6 +101,7 @@ export default function NewDesktop() {
         storage_type:      form.storage_type || null,
         has_wifi_card:     form.has_wifi_card,
         mac_address:       form.mac_address || null,
+        network_connection: form.network_connection || null,
         equipment_user_id: form.equipment_user_id || null,
         observations:      form.observations || null,
       };
@@ -255,14 +257,23 @@ export default function NewDesktop() {
 
             {/* MAC address */}
             <div className="form-group">
-              <label>Adreça MAC {form.has_wifi_card ? '*' : ''}</label>
+              <label>Adreça MAC</label>
               <input
                 type="text"
                 value={form.mac_address}
                 onChange={e => set('mac_address', e.target.value)}
                 placeholder="AA:BB:CC:DD:EE:FF"
-                required={form.has_wifi_card}
               />
+            </div>
+
+            {/* Network connection */}
+            <div className="form-group">
+              <label>Connexió de xarxa</label>
+              <select value={form.network_connection ?? ''} onChange={e => set('network_connection', e.target.value || null)}>
+                <option value="">—</option>
+                <option value="ethernet">Ethernet (cablejat)</option>
+                <option value="wifi">WiFi (sense fil)</option>
+              </select>
             </div>
 
             {/* Equipment user */}
