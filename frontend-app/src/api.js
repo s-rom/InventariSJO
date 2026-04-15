@@ -44,9 +44,10 @@ export const api = {
   deleteCpu:  (id)       => req(`/cpus/${id}`, { method: 'DELETE' }),
 
   // ── Operating Systems ─────────────────────────────────────
-  listOS:    ()     => req('/os'),
-  createOS:  (data) => req('/os', { method: 'POST',   body: JSON.stringify(data) }),
-  deleteOS:  (id)   => req(`/os/${id}`, { method: 'DELETE' }),
+  listOS:    ()         => req('/os'),
+  createOS:  (data)     => req('/os', { method: 'POST',  body: JSON.stringify(data) }),
+  updateOS:  (id, data) => req(`/os/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteOS:  (id)       => req(`/os/${id}`, { method: 'DELETE' }),
 
   // ── Brands ────────────────────────────────────────────────
   listBrands:   ()         => req('/brands'),

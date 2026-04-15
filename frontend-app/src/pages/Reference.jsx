@@ -43,12 +43,14 @@ function Section({ title, children }) {
 
 // ─────────────────────────────────────────────
 function CpusTab() {
-  const [list, setList]       = useState([]);
-  const [name, setName]       = useState('');
-  const [score, setScore]     = useState('');
-  const [saving, setSaving]   = useState(false);
-  const [err, setErr]         = useState('');
-  const cd                    = useConfirmDelete();
+  const [list, setList]           = useState([]);
+  const [name, setName]           = useState('');
+  const [score, setScore]         = useState('');
+  const [saving, setSaving]       = useState(false);
+  const [err, setErr]             = useState('');
+  const [editing, setEditing]     = useState(null); // { cpu_id, model_name, benchmark_score }
+  const [editErr, setEditErr]     = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   const load = useCallback(() => api.listCpus().then(d => setList(d ?? [])).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
@@ -62,68 +64,98 @@ function CpusTab() {
     finally { setSaving(false); }
   }
 
-  async function del(id) {
-    try { await api.deleteCpu(id); load(); } catch (ex) { setErr(ex.message); }
-    cd.cancelDelete();
+  async function saveEdit() {
+    setEditErr(''); setEditSaving(true);
+    try {
+      await api.updateCpu(editing.cpu_id, {
+        model_name: editing.model_name,
+        benchmark_score: editing.benchmark_score !== '' ? parseInt(editing.benchmark_score, 10) : null,
+      });
+      setEditing(null); load();
+    } catch (ex) { setEditErr(ex.message); }
+    finally { setEditSaving(false); }
   }
 
   return (
-    <Section title="CPUs">
-      <div className="card" style={{ marginBottom: 14 }}>
-        <form onSubmit={create} className="form-panel">
-          <div className="form-grid" style={{ gridTemplateColumns: '1fr auto auto' }}>
-            <div className="form-group">
+    <>
+      <Section title="CPUs">
+        <div className="card" style={{ marginBottom: 14 }}>
+          <form onSubmit={create} className="form-panel">
+            <div className="form-grid" style={{ gridTemplateColumns: '1fr auto auto' }}>
+              <div className="form-group">
+                <label>Nom del model *</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Intel Core i5-4590 3.30GHz" required />
+              </div>
+              <div className="form-group">
+                <label>Benchmark (Passmark)</label>
+                <input type="number" min="0" value={score} onChange={e => setScore(e.target.value)} placeholder="5354" />
+              </div>
+              <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+                <label style={{ visibility: 'hidden' }}>_</label>
+                <button type="submit" className="btn btn-primary" disabled={saving || !name}>{saving ? '…' : 'Afegir'}</button>
+              </div>
+            </div>
+            {err && <div className="error-msg">{err}</div>}
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Model</th><th>Benchmark</th><th></th></tr></thead>
+              <tbody>
+                {list.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {list.map(c => (
+                  <tr key={c.cpu_id}>
+                    <td>{c.model_name}</td>
+                    <td>{c.benchmark_score ?? '—'}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => { setEditErr(''); setEditing({ ...c, benchmark_score: c.benchmark_score ?? '' }); }}>Editar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Section>
+
+      {editing && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setEditing(null); }}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: 480, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Editar CPU</h2>
+            <div className="form-group" style={{ marginBottom: 12 }}>
               <label>Nom del model *</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Intel Core i5-4590 3.30GHz" required />
+              <input type="text" value={editing.model_name} onChange={e => setEditing(v => ({ ...v, model_name: e.target.value }))} required autoFocus />
             </div>
-            <div className="form-group">
+            <div className="form-group" style={{ marginBottom: 16 }}>
               <label>Benchmark (Passmark)</label>
-              <input type="number" min="0" value={score} onChange={e => setScore(e.target.value)} placeholder="5354" />
+              <input type="number" min="0" value={editing.benchmark_score} onChange={e => setEditing(v => ({ ...v, benchmark_score: e.target.value }))} placeholder="5354" />
             </div>
-            <div className="form-group" style={{ justifyContent: 'flex-end' }}>
-              <label style={{ visibility: 'hidden' }}>_</label>
-              <button type="submit" className="btn btn-primary" disabled={saving || !name}>{saving ? '…' : 'Afegir'}</button>
+            {editErr && <div className="error-msg" style={{ marginBottom: 12 }}>{editErr}</div>}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel·lar</button>
+              <button className="btn btn-primary" onClick={saveEdit} disabled={editSaving || !editing.model_name}>{editSaving ? '…' : 'Guardar'}</button>
             </div>
           </div>
-          {err && <div className="error-msg">{err}</div>}
-        </form>
-      </div>
-
-      <div className="card">
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Model</th><th>Benchmark</th><th></th></tr></thead>
-            <tbody>
-              {list.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-              {list.map(c => (
-                <tr key={c.cpu_id}>
-                  <td>{c.model_name}</td>
-                  <td>{c.benchmark_score ?? '—'}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    {cd.isAsking(c.cpu_id)
-                      ? <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
-                          <button className="btn btn-danger btn-sm" onClick={() => del(c.cpu_id)}>Sí</button>
-                          <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
-                      : <button className="btn btn-danger btn-sm" onClick={() => cd.askDelete(c.cpu_id)}>Eliminar</button>
-                    }
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-      </div>
-    </Section>
+      )}
+    </>
   );
 }
 
 // ─────────────────────────────────────────────
 function OsTab() {
-  const [list, setList]     = useState([]);
-  const [name, setName]     = useState('');
-  const [saving, setSaving] = useState(false);
-  const [err, setErr]       = useState('');
-  const cd                  = useConfirmDelete();
+  const [list, setList]           = useState([]);
+  const [name, setName]           = useState('');
+  const [saving, setSaving]       = useState(false);
+  const [err, setErr]             = useState('');
+  const [editing, setEditing]     = useState(null); // { os_id, name }
+  const [editErr, setEditErr]     = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   const load = useCallback(() => api.listOS().then(d => setList(d ?? [])).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
@@ -135,53 +167,74 @@ function OsTab() {
     finally { setSaving(false); }
   }
 
-  async function del(id) {
-    try { await api.deleteOS(id); load(); } catch (ex) { setErr(ex.message); }
-    cd.cancelDelete();
+  async function saveEdit() {
+    setEditErr(''); setEditSaving(true);
+    try {
+      await api.updateOS(editing.os_id, { name: editing.name });
+      setEditing(null); load();
+    } catch (ex) { setEditErr(ex.message); }
+    finally { setEditSaving(false); }
   }
 
   return (
-    <Section title="Sistemes Operatius">
-      <div className="card" style={{ marginBottom: 14 }}>
-        <form onSubmit={create} className="form-panel">
-          <div className="form-grid" style={{ gridTemplateColumns: '1fr auto' }}>
-            <div className="form-group">
-              <label>Nom *</label>
-              <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Windows 11" required />
+    <>
+      <Section title="Sistemes Operatius">
+        <div className="card" style={{ marginBottom: 14 }}>
+          <form onSubmit={create} className="form-panel">
+            <div className="form-grid" style={{ gridTemplateColumns: '1fr auto' }}>
+              <div className="form-group">
+                <label>Nom *</label>
+                <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="Windows 11" required />
+              </div>
+              <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+                <label style={{ visibility: 'hidden' }}>_</label>
+                <button type="submit" className="btn btn-primary" disabled={saving || !name}>{saving ? '…' : 'Afegir'}</button>
+              </div>
             </div>
-            <div className="form-group" style={{ justifyContent: 'flex-end' }}>
-              <label style={{ visibility: 'hidden' }}>_</label>
-              <button type="submit" className="btn btn-primary" disabled={saving || !name}>{saving ? '…' : 'Afegir'}</button>
+            {err && <div className="error-msg">{err}</div>}
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Nom</th><th></th></tr></thead>
+              <tbody>
+                {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {list.map(o => (
+                  <tr key={o.os_id}>
+                    <td>{o.name}</td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => { setEditErr(''); setEditing({ ...o }); }}>Editar</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Section>
+
+      {editing && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setEditing(null); }}
+        >
+          <div className="card" style={{ width: '100%', maxWidth: 400, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Editar SO</h2>
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label>Nom *</label>
+              <input type="text" value={editing.name} onChange={e => setEditing(v => ({ ...v, name: e.target.value }))} required autoFocus />
+            </div>
+            {editErr && <div className="error-msg" style={{ marginBottom: 12 }}>{editErr}</div>}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel·lar</button>
+              <button className="btn btn-primary" onClick={saveEdit} disabled={editSaving || !editing.name}>{editSaving ? '…' : 'Guardar'}</button>
             </div>
           </div>
-          {err && <div className="error-msg">{err}</div>}
-        </form>
-      </div>
-
-      <div className="card">
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Nom</th><th></th></tr></thead>
-            <tbody>
-              {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-              {list.map(o => (
-                <tr key={o.os_id}>
-                  <td>{o.name}</td>
-                  <td style={{ textAlign: 'right' }}>
-                    {cd.isAsking(o.os_id)
-                      ? <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
-                          <button className="btn btn-danger btn-sm" onClick={() => del(o.os_id)}>Sí</button>
-                          <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
-                      : <button className="btn btn-danger btn-sm" onClick={() => cd.askDelete(o.os_id)}>Eliminar</button>
-                    }
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
-      </div>
-    </Section>
+      )}
+    </>
   );
 }
 
@@ -783,13 +836,10 @@ function RoomsTab() {
 
 // ─────────────────────────────────────────────
 function CyclesTab() {
-  const [list, setList]         = useState([]);
-  const [name, setName]         = useState('');
-  const [editId, setEditId]     = useState(null);
-  const [editName, setEditName] = useState('');
-  const [saving, setSaving]     = useState(false);
-  const [err, setErr]           = useState('');
-  const cd                      = useConfirmDelete();
+  const [list, setList]   = useState([]);
+  const [name, setName]   = useState('');
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]     = useState('');
 
   const load = useCallback(() => api.listCycles().then(d => setList(d ?? [])).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
@@ -799,16 +849,6 @@ function CyclesTab() {
     try { await api.createCycle({ name }); setName(''); load(); }
     catch (ex) { setErr(ex.message); }
     finally { setSaving(false); }
-  }
-
-  async function save(id) {
-    try { await api.updateCycle(id, { name: editName }); setEditId(null); load(); }
-    catch (ex) { setErr(ex.message); }
-  }
-
-  async function del(id) {
-    try { await api.deleteCycle(id); load(); } catch (ex) { setErr(ex.message); }
-    cd.cancelDelete();
   }
 
   return (
@@ -831,33 +871,12 @@ function CyclesTab() {
       <div className="card">
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Nom</th><th></th></tr></thead>
+            <thead><tr><th>Nom</th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {list.length === 0 && <tr><td style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
               {list.map(c => (
                 <tr key={c.cycle_id}>
-                  <td>
-                    {editId === c.cycle_id
-                      ? <input type="text" value={editName} onChange={e => setEditName(e.target.value)} style={{ width: 200 }} autoFocus />
-                      : c.name}
-                  </td>
-                  <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                    {editId === c.cycle_id ? (
-                      <>
-                        <button className="btn btn-primary btn-sm" onClick={() => save(c.cycle_id)}>Guardar</button>
-                        <button className="btn btn-ghost btn-sm" style={{ marginLeft: 4 }} onClick={() => setEditId(null)}>Cancel·lar</button>
-                      </>
-                    ) : cd.isAsking(c.cycle_id) ? (
-                      <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
-                        <button className="btn btn-danger btn-sm" onClick={() => del(c.cycle_id)}>Sí</button>
-                        <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
-                    ) : (
-                      <>
-                        <button className="btn btn-ghost btn-sm" onClick={() => { setEditId(c.cycle_id); setEditName(c.name); }}>Editar</button>
-                        <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(c.cycle_id)}>Eliminar</button>
-                      </>
-                    )}
-                  </td>
+                  <td>{c.name}</td>
                 </tr>
               ))}
             </tbody>
