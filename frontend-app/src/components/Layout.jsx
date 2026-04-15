@@ -160,15 +160,9 @@ export default function Layout({ children, onLogout, role, username }) {
             <div className="sidebar-bottom">
               {username && (
                 <div style={{ padding: '0 4px 10px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <button
-                    onClick={() => setShowChgPwd(true)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
-                    title="Canviar contrasenya"
-                  >
-                    <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                      {username} 🔒
-                    </span>
-                  </button>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                    {username}
+                  </span>
                   <span style={{ fontSize: 11, color: 'var(--muted)' }}>
                     {ROLE_LABEL[role] ?? role}
                   </span>
