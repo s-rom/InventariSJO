@@ -611,8 +611,8 @@ function AuditDiff({ eventType, oldValues, newValues }) {
     );
   }
 
-  // updated — only iterate keys present in new_values (the actually edited fields)
-  const changed = Object.keys(newObj);
+  // updated — keys in new_values that actually differ from old_values
+  const changed = Object.keys(newObj).filter(k => JSON.stringify(oldObj[k]) !== JSON.stringify(newObj[k]));
   if (changed.length === 0) {
     return <span style={{ fontSize: 12, color: 'var(--muted)' }}>Sense canvis de camp detectats.</span>;
   }
