@@ -214,11 +214,6 @@ export default function Computers() {
   const totalLaptopPages = Math.ceil(sortedLaptops.length / laptopPageSize) || 1;
   const pagedLaptops = sortedLaptops.slice((laptopPage - 1) * laptopPageSize, laptopPage * laptopPageSize);
 
-  const laptopsWithScore = laptops.filter(l => l.cpu_benchmark_score != null);
-  const avgCpuScore = laptopsWithScore.length > 0
-    ? Math.round(laptopsWithScore.reduce((s, l) => s + l.cpu_benchmark_score, 0) / laptopsWithScore.length)
-    : null;
-
   async function handleDelete(id, hostname) {
     if (!confirm(`Eliminar l'equip "${hostname}"?`)) return;
     try {
@@ -263,7 +258,6 @@ export default function Computers() {
           { icon: '🖥️', value: desktops.length,                   label: 'Sobretaules',           color: '#3b82f6' },
           { icon: '💻', value: laptops.length,                    label: 'Portàtils',              color: '#8b5cf6' },
           { icon: '📦', value: desktops.length + laptops.length,  label: 'Total equips',           color: '#10b981' },
-          ...(avgCpuScore != null ? [{ icon: '⚡', value: avgCpuScore, label: 'Score CPU mig portàtils', color: '#f59e0b' }] : []),
         ].map(({ icon, value, label, color }) => (
           <div key={label} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: '16px 20px', boxShadow: 'var(--shadow)', borderTop: `3px solid ${color}` }}>
             <div style={{ fontSize: 20, marginBottom: 6 }}>{icon}</div>
@@ -349,7 +343,9 @@ export default function Computers() {
                       <td><strong>{d.hostname}</strong></td>
                       <td>{R.roomMap[d.room_id] ?? '—'}</td>
                       <td>{d.desktop_model_id ? R.dmMap[d.desktop_model_id] ?? '—' : <span style={{ color: 'var(--muted)' }}>sense model</span>}</td>
-                      <td>{d.cpu_id ? R.cpuMap[d.cpu_id] ?? '—' : '—'}</td>
+                      <td style={{ fontSize: 12 }}>{d.cpu_id
+                          ? <>{R.cpuMap[d.cpu_id] ?? '—'}{R.cpuScoreMap[d.cpu_id] != null && <span style={{ color: 'var(--muted)' }}> ({R.cpuScoreMap[d.cpu_id]})</span>}</>
+                          : '—'}</td>
                       <td>{osEmoji(R.osMap[d.os_id])}</td>
                       <td>{ramLabel(d.ram_gb, d.ram_type)}</td>
                       <td>{storageLabel(d.storage_gb, d.storage_type)}</td>
@@ -615,9 +611,8 @@ function AuditDiff({ eventType, oldValues, newValues }) {
     );
   }
 
-  // updated — only show changed fields
-  const allKeys = new Set([...Object.keys(oldObj), ...Object.keys(newObj)]);
-  const changed = [...allKeys].filter(k => JSON.stringify(oldObj[k]) !== JSON.stringify(newObj[k]));
+  // updated — only iterate keys present in new_values (the actually edited fields)
+  const changed = Object.keys(newObj);
   if (changed.length === 0) {
     return <span style={{ fontSize: 12, color: 'var(--muted)' }}>Sense canvis de camp detectats.</span>;
   }
