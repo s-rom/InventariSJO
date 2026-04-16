@@ -46,6 +46,7 @@ export default function Computers() {
   const navigate = useNavigate();
   const { role }  = useAuth();
   const canEdit   = role !== 'readonly';
+  const isAdmin   = role === 'admin';
 
   const [desktops,       setDesktops]       = useState([]);
   const [laptops,        setLaptops]        = useState([]);
@@ -54,6 +55,9 @@ export default function Computers() {
   const [err,            setErr]            = useState('');
   const [query,          setQuery]          = useState('');
   const [editItem,       setEditItem]       = useState(null); // { item, type }
+  const [auditItem,      setAuditItem]      = useState(null); // { id, type, hostname }
+  const [auditLog,       setAuditLog]       = useState([]);
+  const [auditLoading,   setAuditLoading]   = useState(false);
   const [sortCol, setSortCol] = useState('hostname');
   const [sortAsc, setSortAsc] = useState(true);
   const [desktopPage, setDesktopPage] = useState(1);
@@ -111,6 +115,16 @@ export default function Computers() {
     }
     load();
   }, []);
+
+  useEffect(() => {
+    if (!auditItem) { setAuditLog([]); return; }
+    setAuditLoading(true);
+    setAuditLog([]);
+    api.getAuditLog(auditItem.type, auditItem.id)
+      .then(entries => setAuditLog(entries ?? []))
+      .catch(() => setAuditLog([]))
+      .finally(() => setAuditLoading(false));
+  }, [auditItem]);
 
   if (loading) return (
     <div className="empty" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
@@ -200,6 +214,11 @@ export default function Computers() {
   const totalLaptopPages = Math.ceil(sortedLaptops.length / laptopPageSize) || 1;
   const pagedLaptops = sortedLaptops.slice((laptopPage - 1) * laptopPageSize, laptopPage * laptopPageSize);
 
+  const laptopsWithScore = laptops.filter(l => l.cpu_benchmark_score != null);
+  const avgCpuScore = laptopsWithScore.length > 0
+    ? Math.round(laptopsWithScore.reduce((s, l) => s + l.cpu_benchmark_score, 0) / laptopsWithScore.length)
+    : null;
+
   async function handleDelete(id, hostname) {
     if (!confirm(`Eliminar l'equip "${hostname}"?`)) return;
     try {
@@ -236,6 +255,22 @@ export default function Computers() {
             {filteredDesktops.length + filteredLaptops.length} resultat{filteredDesktops.length + filteredLaptops.length !== 1 ? 's' : ''}
           </span>
         )}
+      </div>
+
+      {/* STATS */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 24 }}>
+        {[
+          { icon: '🖥️', value: desktops.length,                   label: 'Sobretaules',           color: '#3b82f6' },
+          { icon: '💻', value: laptops.length,                    label: 'Portàtils',              color: '#8b5cf6' },
+          { icon: '📦', value: desktops.length + laptops.length,  label: 'Total equips',           color: '#10b981' },
+          ...(avgCpuScore != null ? [{ icon: '⚡', value: avgCpuScore, label: 'Score CPU mig portàtils', color: '#f59e0b' }] : []),
+        ].map(({ icon, value, label, color }) => (
+          <div key={label} style={{ background: '#fff', border: '1px solid var(--border)', borderRadius: 8, padding: '16px 20px', boxShadow: 'var(--shadow)', borderTop: `3px solid ${color}` }}>
+            <div style={{ fontSize: 20, marginBottom: 6 }}>{icon}</div>
+            <div style={{ fontSize: 30, fontWeight: 700, color, lineHeight: 1 }}>{value}</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)', marginTop: 6 }}>{label}</div>
+          </div>
+        ))}
       </div>
 
       {/* DESKTOPS */}
@@ -328,6 +363,11 @@ export default function Computers() {
                             <button className="btn btn-sm" onClick={() => setEditItem({ item: d, type: 'desktop' })}>
                               Editar
                             </button>
+                            {isAdmin && (
+                              <button className="btn btn-sm" style={{ color: 'var(--muted)' }} onClick={() => setAuditItem({ id: d.computer_id, type: 'desktop', hostname: d.hostname })}>
+                                Historial
+                              </button>
+                            )}
                             <button className="btn btn-danger btn-sm" onClick={() => handleDelete(d.computer_id, d.hostname)}>
                               Eliminar
                             </button>
@@ -439,6 +479,11 @@ export default function Computers() {
                             <button className="btn btn-sm" onClick={() => setEditItem({ item: l, type: 'laptop' })}>
                               Editar
                             </button>
+                            {isAdmin && (
+                              <button className="btn btn-sm" style={{ color: 'var(--muted)' }} onClick={() => setAuditItem({ id: l.computer_id, type: 'laptop', hostname: l.hostname })}>
+                                Historial
+                              </button>
+                            )}
                             <button className="btn btn-danger btn-sm" onClick={() => handleDelete(l.computer_id, l.hostname)}>
                               Eliminar
                             </button>
@@ -487,6 +532,160 @@ export default function Computers() {
           onClose={() => setEditItem(null)}
         />
       )}
+
+      {/* AUDIT MODAL */}
+      {auditItem && (
+        <AuditModal
+          item={auditItem}
+          log={auditLog}
+          loading={auditLoading}
+          onClose={() => setAuditItem(null)}
+        />
+      )}
     </>
+  );
+}
+
+// ─── Audit helpers ────────────────────────────────────────────────────────────
+
+function parseAuditJson(val) {
+  if (!val) return null;
+  if (typeof val === 'object') return val;
+  try { return JSON.parse(val); } catch {}
+  try { return JSON.parse(atob(val)); } catch {}
+  return null;
+}
+
+const FIELD_LABELS = {
+  hostname: 'Hostname', ram_gb: 'RAM (GB)', ram_type: 'Tipus RAM',
+  storage_gb: 'Emmagatzematge (GB)', storage_type: 'Tipus emmagatzematge',
+  has_wifi_card: 'Té WiFi', mac_address: 'MAC', observations: 'Observacions',
+  cpu_id: 'CPU', os_id: 'SO', room_id: 'Sala', equipment_user_id: 'Usuari equip',
+  desktop_model_id: 'Model sobretaula', laptop_model_id: 'Model portàtil',
+  serial_number: 'Núm. sèrie',
+};
+
+const EVENT_META = {
+  created: { label: 'Creat',     bg: '#dcfce7', color: '#16a34a' },
+  updated: { label: 'Modificat', bg: '#dbeafe', color: '#2563eb' },
+  deleted: { label: 'Eliminat',  bg: '#fee2e2', color: '#dc2626' },
+};
+
+function AuditDiff({ eventType, oldValues, newValues }) {
+  const oldObj = parseAuditJson(oldValues) ?? {};
+  const newObj = parseAuditJson(newValues) ?? {};
+
+  if (eventType === 'created') {
+    const rows = Object.entries(newObj).filter(([, v]) => v != null && v !== '');
+    return (
+      <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+        <thead><tr>
+          <th style={{ textAlign: 'left', paddingBottom: 4, color: 'var(--muted)', fontWeight: 500, width: '40%' }}>Camp</th>
+          <th style={{ textAlign: 'left', paddingBottom: 4, color: '#16a34a', fontWeight: 500 }}>Valor</th>
+        </tr></thead>
+        <tbody>
+          {rows.map(([k, v]) => (
+            <tr key={k}>
+              <td style={{ paddingRight: 16, color: 'var(--muted)', paddingBottom: 2 }}>{FIELD_LABELS[k] || k}</td>
+              <td style={{ color: '#16a34a' }}>{String(v)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  if (eventType === 'deleted') {
+    const rows = Object.entries(oldObj).filter(([, v]) => v != null && v !== '');
+    return (
+      <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+        <thead><tr>
+          <th style={{ textAlign: 'left', paddingBottom: 4, color: 'var(--muted)', fontWeight: 500, width: '40%' }}>Camp</th>
+          <th style={{ textAlign: 'left', paddingBottom: 4, color: '#dc2626', fontWeight: 500 }}>Valor eliminat</th>
+        </tr></thead>
+        <tbody>
+          {rows.map(([k, v]) => (
+            <tr key={k}>
+              <td style={{ paddingRight: 16, color: 'var(--muted)', paddingBottom: 2 }}>{FIELD_LABELS[k] || k}</td>
+              <td style={{ color: '#dc2626', textDecoration: 'line-through' }}>{String(v)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+
+  // updated — only show changed fields
+  const allKeys = new Set([...Object.keys(oldObj), ...Object.keys(newObj)]);
+  const changed = [...allKeys].filter(k => JSON.stringify(oldObj[k]) !== JSON.stringify(newObj[k]));
+  if (changed.length === 0) {
+    return <span style={{ fontSize: 12, color: 'var(--muted)' }}>Sense canvis de camp detectats.</span>;
+  }
+  return (
+    <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+      <thead><tr>
+        <th style={{ textAlign: 'left', paddingBottom: 4, color: 'var(--muted)', fontWeight: 500, width: '30%' }}>Camp</th>
+        <th style={{ textAlign: 'left', paddingBottom: 4, color: '#dc2626', fontWeight: 500, width: '35%' }}>Anterior</th>
+        <th style={{ textAlign: 'left', paddingBottom: 4, color: '#16a34a', fontWeight: 500 }}>Nou</th>
+      </tr></thead>
+      <tbody>
+        {changed.map(k => (
+          <tr key={k}>
+            <td style={{ paddingRight: 16, color: 'var(--muted)', paddingBottom: 2 }}>{FIELD_LABELS[k] || k}</td>
+            <td style={{ paddingRight: 16, color: '#dc2626', textDecoration: 'line-through' }}>{String(oldObj[k] ?? '—')}</td>
+            <td style={{ color: '#16a34a' }}>{String(newObj[k] ?? '—')}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function AuditModal({ item, log, loading, onClose }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+      <div style={{ background: '#fff', borderRadius: 10, width: '100%', maxWidth: 680, maxHeight: '80vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>Historial de canvis</div>
+            <div style={{ fontSize: 13, color: 'var(--muted)' }}>
+              {item.hostname} · {item.type === 'desktop' ? 'Sobretaula' : 'Portàtil'}
+            </div>
+          </div>
+          <button className="btn btn-ghost btn-sm" onClick={onClose}>✕ Tancar</button>
+        </div>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>Carregant historial…</div>
+          ) : log.length === 0 ? (
+            <div style={{ textAlign: 'center', color: 'var(--muted)', padding: 32 }}>
+              Sense registres d'auditoria per a aquest equip.
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {log.map((entry, i) => {
+                const meta = EVENT_META[entry.event_type] ?? { label: entry.event_type, bg: '#f3f4f6', color: 'var(--muted)' };
+                const date = new Date(entry.changed_at);
+                const dateStr = isNaN(date) ? entry.changed_at : date.toLocaleString('ca-ES', { dateStyle: 'short', timeStyle: 'short' });
+                return (
+                  <div key={i} style={{ border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f9fafb' }}>
+                      <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: meta.bg, color: meta.color }}>
+                        {meta.label}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--muted)' }}>{dateStr}</span>
+                      <span style={{ fontSize: 12, marginLeft: 'auto' }}>👤 {entry.changed_by_username}</span>
+                    </div>
+                    <div style={{ padding: '10px 14px' }}>
+                      <AuditDiff eventType={entry.event_type} oldValues={entry.old_values} newValues={entry.new_values} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

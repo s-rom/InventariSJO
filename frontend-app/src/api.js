@@ -144,6 +144,9 @@ export const api = {
   createLaptop:  (data)     => req('/laptops', { method: 'POST',  body: JSON.stringify(data) }),
   updateLaptop:  (id, data) => req(`/laptops/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
 
+  // ── Audit ─────────────────────────────────────────────
+  getAuditLog: (table, recordId) => req(`/audit?table=${encodeURIComponent(table)}&record_id=${encodeURIComponent(recordId)}`),
+
   // ── Users (admin) ─────────────────────────────────────────
   listUsers:   ()             => req('/users'),
   createUser:  (data)         => req('/users', { method: 'POST',  body: JSON.stringify(data) }),
