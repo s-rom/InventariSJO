@@ -85,8 +85,12 @@ function ChangePasswordModal({ onClose }) {
   );
 }
 
+const TUTOR_NAV = [
+  { to: '/students', label: '👨‍🎓 Alumnes' },
+];
+
 export default function Layout({ children, onLogout, role, username }) {
-  const nav = role === 'admin' ? [...NAV, ...ADMIN_NAV] : NAV;
+  const nav = role === 'tutor' ? TUTOR_NAV : role === 'admin' ? [...NAV, ...ADMIN_NAV] : NAV;
   // sidebarMode: 'full' | 'icons' | 'none'
   const [sidebarMode,  setSidebarMode]  = useState('full');
   const [showChgPwd,   setShowChgPwd]   = useState(false);

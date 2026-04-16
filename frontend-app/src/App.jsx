@@ -23,6 +23,11 @@ function RequireAdmin({ role, children }) {
   return children;
 }
 
+function RequireNonTutor({ role, children }) {
+  if (role === 'tutor') return <Navigate to="/students" replace />;
+  return children;
+}
+
 export default function App() {
   const [authed,   setAuthed]   = useState(null); // null=checking, false=login, true=in
   const [role,     setRole]     = useState(getRole());
@@ -53,7 +58,7 @@ export default function App() {
         <Routes>
           <Route
             path="/login"
-            element={authed ? <Navigate to="/computers" replace /> : <Login onLogin={handleLogin} />}
+            element={authed ? <Navigate to={role === 'tutor' ? '/students' : '/computers'} replace /> : <Login onLogin={handleLogin} />}
           />
           <Route
             path="/*"
@@ -61,14 +66,14 @@ export default function App() {
               <RequireAuth>
                 <Layout onLogout={handleLogout} role={role} username={username}>
                   <Routes>
-                    <Route index element={<Navigate to="/computers" replace />} />
-                    <Route path="computers"            element={<Computers />} />
-                    <Route path="computers/new-desktop" element={<NewDesktop />} />
-                    <Route path="computers/new-laptop"  element={<NewLaptop />} />
+                    <Route index element={<Navigate to={role === 'tutor' ? '/students' : '/computers'} replace />} />
+                    <Route path="computers"            element={<RequireNonTutor role={role}><Computers /></RequireNonTutor>} />
+                    <Route path="computers/new-desktop" element={<RequireNonTutor role={role}><NewDesktop /></RequireNonTutor>} />
+                    <Route path="computers/new-laptop"  element={<RequireNonTutor role={role}><NewLaptop /></RequireNonTutor>} />
                     <Route path="students"             element={<Students />} />
-                    <Route path="reference"            element={<Reference />} />
+                    <Route path="reference"            element={<RequireNonTutor role={role}><Reference /></RequireNonTutor>} />
                     <Route path="admin/users"          element={<RequireAdmin role={role}><Users /></RequireAdmin>} />
-                    <Route path="*"                    element={<Navigate to="/computers" replace />} />
+                    <Route path="*"                    element={<Navigate to={role === 'tutor' ? '/students' : '/computers'} replace />} />
                   </Routes>
                 </Layout>
               </RequireAuth>
