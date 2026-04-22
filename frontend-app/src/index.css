@@ -140,6 +140,11 @@ textarea { resize: vertical; min-height: 64px; }
 .login-card .btn { width: 100%; justify-content: center; margin-top: 6px; padding: 9px; }
 .error-msg { color: var(--danger); font-size: 12px; margin-top: 8px; }
 
+.login-divider { display: flex; align-items: center; gap: 8px; margin: 16px 0 10px; color: var(--muted); font-size: 12px; }
+.login-divider::before, .login-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.btn-google { background: #fff; border-color: var(--border); color: #3c4043; }
+.btn-google:hover { background: #f8f9fa; border-color: #dadce0; }
+
 /* Misc */
 .empty { padding: 32px; text-align: center; color: var(--muted); }
 
