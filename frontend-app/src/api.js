@@ -29,6 +29,11 @@ export const api = {
     setRole(data.role_id);
     return data;
   },
+  // Called after Google OAuth redirect to store the session received via URL params
+  storeSession: (token, role) => {
+    setToken(token);
+    setRole(role);
+  },
   logout: async () => {
     await req('/auth/logout', { method: 'POST' }).catch(() => {});
     clearToken();

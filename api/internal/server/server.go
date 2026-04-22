@@ -20,6 +20,7 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 
 	// ─── Handlers ────────────────────────────────────────────────────────────
 	authH := handler.NewAuthHandler(queries, sessions, logger)
+	googleAuthH := handler.NewGoogleAuthHandler(queries, sessions, logger)
 	usersH := handler.NewUsersHandler(queries, logger)
 	rolesH := handler.NewRolesHandler(queries, logger)
 	centersH := handler.NewCentersHandler(queries, logger)
@@ -44,6 +45,8 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	mux.HandleFunc("POST /auth/logout", authH.Logout)
 	mux.HandleFunc("GET /auth/me", authH.Me)
 	mux.HandleFunc("POST /auth/change-password", authH.ChangePassword)
+	mux.HandleFunc("GET /auth/google", googleAuthH.Redirect)
+	mux.HandleFunc("GET /auth/google/callback", googleAuthH.Callback)
 
 	// ─── Users ────────────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /users", usersH.List)

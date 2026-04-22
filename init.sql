@@ -30,8 +30,13 @@ CREATE TABLE role (
 CREATE TABLE app_user (
     app_user_id   BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     username      TEXT NOT NULL UNIQUE,
-    password_hash TEXT NOT NULL CHECK (length(password_hash) >= 60),
-    role_id       TEXT NOT NULL DEFAULT 'readonly' REFERENCES role (role_id) ON UPDATE CASCADE
+    -- NULL for Google-only accounts; non-NULL must be a valid bcrypt hash (>=60 chars)
+    password_hash TEXT CHECK (password_hash IS NULL OR length(password_hash) >= 60),
+    google_sub    TEXT UNIQUE,
+    email         TEXT UNIQUE,
+    role_id       TEXT NOT NULL DEFAULT 'readonly' REFERENCES role (role_id) ON UPDATE CASCADE,
+    -- A user must have at least one auth method
+    CONSTRAINT app_user_has_auth CHECK (password_hash IS NOT NULL OR google_sub IS NOT NULL)
 );
 
 

@@ -227,10 +227,12 @@ func (ns NullStorageTypeEnum) Value() (driver.Value, error) {
 }
 
 type AppUser struct {
-	AppUserID    int64  `json:"app_user_id"`
-	Username     string `json:"username"`
-	PasswordHash string `json:"password_hash"`
-	RoleID       string `json:"role_id"`
+	AppUserID    int64       `json:"app_user_id"`
+	Username     string      `json:"username"`
+	PasswordHash pgtype.Text `json:"password_hash"`
+	GoogleSub    pgtype.Text `json:"google_sub"`
+	Email        pgtype.Text `json:"email"`
+	RoleID       string      `json:"role_id"`
 }
 
 type AuditLog struct {

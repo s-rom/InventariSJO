@@ -10,6 +10,7 @@ import (
 	dbsqlc "inventari/api/internal/db/sqlc"
 	"inventari/api/internal/session"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -40,7 +41,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+	if !user.PasswordHash.Valid {
+		// Google-only account: cannot log in with password
+		respondError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash.String), []byte(req.Password)); err != nil {
 		respondError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
@@ -112,7 +119,11 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 		respondError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
-	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+	if !dbUser.PasswordHash.Valid {
+		respondError(w, http.StatusBadRequest, "account uses Google login, cannot change password")
+		return
+	}
+	if err := bcrypt.CompareHashAndPassword([]byte(dbUser.PasswordHash.String), []byte(req.CurrentPassword)); err != nil {
 		respondError(w, http.StatusUnauthorized, "current password is incorrect")
 		return
 	}
@@ -125,7 +136,7 @@ func (h *AuthHandler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.queries.UpdateUserPassword(r.Context(), dbsqlc.UpdateUserPasswordParams{
 		AppUserID:    user.AppUserID,
-		PasswordHash: string(hash),
+		PasswordHash: pgtype.Text{String: string(hash), Valid: true},
 	}); err != nil {
 		h.logger.Error("update password", "error", err)
 		respondError(w, http.StatusInternalServerError, "internal error")

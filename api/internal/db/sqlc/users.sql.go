@@ -18,9 +18,9 @@ RETURNING app_user_id, username, role_id
 `
 
 type CreateUserParams struct {
-	Username     string `json:"username"`
-	PasswordHash string `json:"password_hash"`
-	RoleID       string `json:"role_id"`
+	Username     string      `json:"username"`
+	PasswordHash pgtype.Text `json:"password_hash"`
+	RoleID       string      `json:"role_id"`
 }
 
 type CreateUserRow struct {
@@ -113,8 +113,8 @@ WHERE app_user_id = $1
 `
 
 type UpdateUserPasswordParams struct {
-	AppUserID    int64  `json:"app_user_id"`
-	PasswordHash string `json:"password_hash"`
+	AppUserID    int64       `json:"app_user_id"`
+	PasswordHash pgtype.Text `json:"password_hash"`
 }
 
 func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {

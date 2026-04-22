@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '../api';
 
 export default function Login({ onLogin }) {
@@ -6,6 +6,30 @@ export default function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
+
+  // Handle redirect back from Google OAuth callback
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token    = params.get('token');
+    const role     = params.get('role');
+    const uname    = params.get('username');
+    const oauthErr = params.get('error');
+
+    if (oauthErr) {
+      const messages = {
+        domain_not_allowed: 'El compte de Google no pertany al domini autoritzat.',
+        invalid_state:      'Error de seguretat OAuth. Torna-ho a intentar.',
+      };
+      setError(messages[oauthErr] || `Error d'autenticació: ${oauthErr}`);
+      window.history.replaceState({}, '', '/login');
+      return;
+    }
+
+    if (token && role && uname) {
+      api.storeSession(token, role);
+      onLogin({ token, role_id: role, username: uname });
+    }
+  }, [onLogin]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -19,6 +43,10 @@ export default function Login({ onLogin }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleGoogleLogin() {
+    window.location.href = '/api/auth/google';
   }
 
   return (
@@ -51,6 +79,10 @@ export default function Login({ onLogin }) {
             {loading ? 'Entrant…' : 'Entrar'}
           </button>
         </form>
+        <div className="login-divider">o</div>
+        <button type="button" className="btn btn-google" onClick={handleGoogleLogin}>
+          Inicia sessió amb Google
+        </button>
       </div>
     </div>
   );

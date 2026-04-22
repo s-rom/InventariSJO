@@ -7,10 +7,78 @@ package dbsqlc
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const createGoogleUser = `-- name: CreateGoogleUser :one
+INSERT INTO app_user (username, email, google_sub, role_id)
+VALUES ($1, $2, $3, 'readonly')
+RETURNING app_user_id, username, password_hash, google_sub, email, role_id
+`
+
+type CreateGoogleUserParams struct {
+	Username  string      `json:"username"`
+	Email     pgtype.Text `json:"email"`
+	GoogleSub pgtype.Text `json:"google_sub"`
+}
+
+func (q *Queries) CreateGoogleUser(ctx context.Context, arg CreateGoogleUserParams) (AppUser, error) {
+	row := q.db.QueryRow(ctx, createGoogleUser, arg.Username, arg.Email, arg.GoogleSub)
+	var i AppUser
+	err := row.Scan(
+		&i.AppUserID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.GoogleSub,
+		&i.Email,
+		&i.RoleID,
+	)
+	return i, err
+}
+
+const getUserByEmail = `-- name: GetUserByEmail :one
+SELECT app_user_id, username, password_hash, google_sub, email, role_id
+FROM app_user
+WHERE email = $1
+`
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email pgtype.Text) (AppUser, error) {
+	row := q.db.QueryRow(ctx, getUserByEmail, email)
+	var i AppUser
+	err := row.Scan(
+		&i.AppUserID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.GoogleSub,
+		&i.Email,
+		&i.RoleID,
+	)
+	return i, err
+}
+
+const getUserByGoogleSub = `-- name: GetUserByGoogleSub :one
+SELECT app_user_id, username, password_hash, google_sub, email, role_id
+FROM app_user
+WHERE google_sub = $1
+`
+
+func (q *Queries) GetUserByGoogleSub(ctx context.Context, googleSub pgtype.Text) (AppUser, error) {
+	row := q.db.QueryRow(ctx, getUserByGoogleSub, googleSub)
+	var i AppUser
+	err := row.Scan(
+		&i.AppUserID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.GoogleSub,
+		&i.Email,
+		&i.RoleID,
+	)
+	return i, err
+}
+
 const getUserByUsername = `-- name: GetUserByUsername :one
-SELECT app_user_id, username, password_hash, role_id
+SELECT app_user_id, username, password_hash, google_sub, email, role_id
 FROM app_user
 WHERE username = $1
 `
@@ -22,6 +90,34 @@ func (q *Queries) GetUserByUsername(ctx context.Context, username string) (AppUs
 		&i.AppUserID,
 		&i.Username,
 		&i.PasswordHash,
+		&i.GoogleSub,
+		&i.Email,
+		&i.RoleID,
+	)
+	return i, err
+}
+
+const setGoogleSub = `-- name: SetGoogleSub :one
+UPDATE app_user
+SET google_sub = $1
+WHERE email = $2
+RETURNING app_user_id, username, password_hash, google_sub, email, role_id
+`
+
+type SetGoogleSubParams struct {
+	GoogleSub pgtype.Text `json:"google_sub"`
+	Email     pgtype.Text `json:"email"`
+}
+
+func (q *Queries) SetGoogleSub(ctx context.Context, arg SetGoogleSubParams) (AppUser, error) {
+	row := q.db.QueryRow(ctx, setGoogleSub, arg.GoogleSub, arg.Email)
+	var i AppUser
+	err := row.Scan(
+		&i.AppUserID,
+		&i.Username,
+		&i.PasswordHash,
+		&i.GoogleSub,
+		&i.Email,
 		&i.RoleID,
 	)
 	return i, err

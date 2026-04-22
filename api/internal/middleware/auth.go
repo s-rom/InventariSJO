@@ -16,7 +16,12 @@ const CtxUser ctxKey = "user"
 func Auth(store *session.Store) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Public routes: login (both classic and Google OAuth)
 			if r.Method == http.MethodPost && r.URL.Path == "/auth/login" {
+				next.ServeHTTP(w, r)
+				return
+			}
+			if r.Method == http.MethodGet && (r.URL.Path == "/auth/google" || r.URL.Path == "/auth/google/callback") {
 				next.ServeHTTP(w, r)
 				return
 			}
