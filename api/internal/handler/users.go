@@ -7,6 +7,7 @@ import (
 
 	dbsqlc "inventari/api/internal/db/sqlc"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -53,7 +54,7 @@ func (h *UsersHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	user, err := h.queries.CreateUser(r.Context(), dbsqlc.CreateUserParams{
 		Username:     req.Username,
-		PasswordHash: string(hash),
+		PasswordHash: pgtype.Text{String: string(hash), Valid: true},
 		RoleID:       req.RoleID,
 	})
 	if err != nil {

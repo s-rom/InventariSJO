@@ -26,8 +26,8 @@ type Querier interface {
 	InsertAuditLog(ctx context.Context, arg dbsqlc.InsertAuditLogParams) error
 	// Auth
 	GetUserByUsername(ctx context.Context, username string) (dbsqlc.AppUser, error)
-	GetUserByGoogleSub(ctx context.Context, googleSub string) (dbsqlc.AppUser, error)
-	GetUserByEmail(ctx context.Context, email string) (dbsqlc.AppUser, error)
+	GetUserByGoogleSub(ctx context.Context, googleSub pgtype.Text) (dbsqlc.AppUser, error)
+	GetUserByEmail(ctx context.Context, email pgtype.Text) (dbsqlc.AppUser, error)
 	CreateGoogleUser(ctx context.Context, arg dbsqlc.CreateGoogleUserParams) (dbsqlc.AppUser, error)
 	SetGoogleSub(ctx context.Context, arg dbsqlc.SetGoogleSubParams) (dbsqlc.AppUser, error)
 	UpdateUserPassword(ctx context.Context, arg dbsqlc.UpdateUserPasswordParams) error
