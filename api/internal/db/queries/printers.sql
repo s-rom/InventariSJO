@@ -155,7 +155,7 @@ SET
     ip_address             = COALESCE(sqlc.narg(ip_address),             ip_address),
     room_id                = COALESCE(sqlc.narg(room_id),                room_id),
     equipment_user_id      = COALESCE(sqlc.narg(equipment_user_id),      equipment_user_id),
-    observations           = COALESCE(sqlc.narg(observations),           observations),
+    observations           = sqlc.narg(observations),
     updated_at             = now()
 WHERE printer_id = sqlc.arg(printer_id)
 RETURNING *;

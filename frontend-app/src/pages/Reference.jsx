@@ -1152,9 +1152,11 @@ function PrinterModelsTab() {
   const [refs, setRefs]     = useState(null);
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
-  const [editing, setEditing] = useState(null);
-  const [editErr, setEditErr] = useState('');
+  const [editing, setEditing]   = useState(null);
+  const [editErr, setEditErr]   = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [modelSupplies, setModelSupplies] = useState([]);
+  const [addSupplyId, setAddSupplyId]     = useState(null);
   const cd = useConfirmDelete();
 
   const EMPTY = { brand_id: null, model_name: '', printer_type: 'toner', print_color: 'Color' };
@@ -1164,10 +1166,38 @@ function PrinterModelsTab() {
   const load = useCallback(() => api.listPrinterModels().then(d => setList(d ?? [])).catch(() => {}), []);
   useEffect(() => {
     load();
-    api.listBrands()
-      .then(brands => setRefs({ brandOpts: (brands ?? []).map(b => ({ value: b.brand_id, label: b.name })) }))
+    Promise.all([api.listBrands(), api.listPrinterSupplies()])
+      .then(([brands, supplies]) => setRefs({
+        brandOpts:   (brands   ?? []).map(b => ({ value: b.brand_id,        label: b.name })),
+        supplyOpts:  (supplies ?? []).map(s => ({ value: s.printer_supply_id, label: `${s.name} (${s.supply_type})` })),
+      }))
       .catch(() => {});
   }, [load]);
+
+  const loadModelSupplies = useCallback((modelId) => {
+    api.listSuppliesByModel(modelId).then(d => setModelSupplies(d ?? [])).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (editing) { setAddSupplyId(null); loadModelSupplies(editing.printer_model_id); }
+    else { setModelSupplies([]); }
+  }, [editing, loadModelSupplies]);
+
+  async function addSupply() {
+    if (!addSupplyId || !editing) return;
+    try {
+      await api.addSupplyToModel(editing.printer_model_id, { printer_supply_id: addSupplyId });
+      setAddSupplyId(null);
+      loadModelSupplies(editing.printer_model_id);
+    } catch (ex) { setEditErr(ex.message); }
+  }
+
+  async function removeSupply(supplyId) {
+    try {
+      await api.removeSupplyFromModel(editing.printer_model_id, supplyId);
+      loadModelSupplies(editing.printer_model_id);
+    } catch (ex) { setEditErr(ex.message); }
+  }
 
   async function create(e) {
     e.preventDefault(); setErr(''); setSaving(true);
@@ -1268,7 +1298,7 @@ function PrinterModelsTab() {
       {editing && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}
           onClick={e => { if (e.target === e.currentTarget) setEditing(null); }}>
-          <div className="card" style={{ width: '100%', maxWidth: 500, padding: 24 }}>
+          <div className="card" style={{ width: '100%', maxWidth: 620, padding: 24 }}>
             <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Editar model d'impressora</h2>
             <div className="form-grid">
               <div className="form-group">
@@ -1293,9 +1323,41 @@ function PrinterModelsTab() {
                 </select>
               </div>
             </div>
+
+            <hr style={{ margin: '16px 0', borderColor: 'var(--border)' }} />
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Consumibles associats</div>
+              {modelSupplies.length === 0
+                ? <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 8 }}>Cap consumible associat</div>
+                : <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    {modelSupplies.map(s => (
+                      <span key={s.printer_supply_id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'var(--bg-subtle, #f3f4f6)', borderRadius: 4, padding: '2px 8px', fontSize: 12 }}>
+                        {s.name} <span style={{ color: 'var(--muted)', fontSize: 11 }}>({s.supply_type})</span>
+                        <button
+                          onClick={() => removeSupply(s.printer_supply_id)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger, #dc2626)', padding: '0 2px', lineHeight: 1, fontSize: 14 }}
+                          title="Desvincular"
+                        >×</button>
+                      </span>
+                    ))}
+                  </div>
+              }
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <Combobox
+                    options={refs.supplyOpts.filter(o => !modelSupplies.some(s => s.printer_supply_id === o.value))}
+                    value={addSupplyId}
+                    onChange={setAddSupplyId}
+                    placeholder="Afegir consumible…"
+                  />
+                </div>
+                <button className="btn btn-ghost btn-sm" onClick={addSupply} disabled={!addSupplyId}>Afegir</button>
+              </div>
+            </div>
+
             {editErr && <div className="error-msg" style={{ marginBottom: 12 }}>{editErr}</div>}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
-              <button className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel·lar</button>
+              <button className="btn btn-ghost" onClick={() => setEditing(null)}>Tancar</button>
               <button className="btn btn-primary" onClick={saveEdit} disabled={editSaving || !editing.brand_id || !editing.model_name}>{editSaving ? '…' : 'Guardar'}</button>
             </div>
           </div>
