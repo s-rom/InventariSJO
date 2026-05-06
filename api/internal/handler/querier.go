@@ -86,6 +86,39 @@ type Querier interface {
 	DeleteOS(ctx context.Context, osID int64) error
 	ListOS(ctx context.Context) ([]dbsqlc.O, error)
 	UpdateOS(ctx context.Context, arg dbsqlc.UpdateOSParams) (dbsqlc.O, error)
+	// Printer Models
+	CreatePrinterModel(ctx context.Context, arg dbsqlc.CreatePrinterModelParams) (dbsqlc.PrinterModel, error)
+	DeletePrinterModel(ctx context.Context, printerModelID int64) error
+	GetPrinterModel(ctx context.Context, printerModelID int64) (dbsqlc.GetPrinterModelRow, error)
+	ListPrinterModels(ctx context.Context) ([]dbsqlc.ListPrinterModelsRow, error)
+	UpdatePrinterModel(ctx context.Context, arg dbsqlc.UpdatePrinterModelParams) (dbsqlc.PrinterModel, error)
+	// Printer Supplies
+	AddPrinterModelSupply(ctx context.Context, arg dbsqlc.AddPrinterModelSupplyParams) error
+	CreatePrinterSupply(ctx context.Context, arg dbsqlc.CreatePrinterSupplyParams) (dbsqlc.PrinterSupply, error)
+	DeletePrinterSupply(ctx context.Context, printerSupplyID int64) error
+	GetPrinterSupply(ctx context.Context, printerSupplyID int64) (dbsqlc.PrinterSupply, error)
+	ListPrinterSupplies(ctx context.Context) ([]dbsqlc.PrinterSupply, error)
+	ListSuppliesByPrinterModel(ctx context.Context, printerModelID int64) ([]dbsqlc.PrinterSupply, error)
+	RemovePrinterModelSupply(ctx context.Context, arg dbsqlc.RemovePrinterModelSupplyParams) error
+	UpdatePrinterSupply(ctx context.Context, arg dbsqlc.UpdatePrinterSupplyParams) (dbsqlc.PrinterSupply, error)
+	// Printers
+	CreatePrinter(ctx context.Context, arg dbsqlc.CreatePrinterParams) (dbsqlc.Printer, error)
+	DeletePrinter(ctx context.Context, printerID int64) error
+	GetPrinter(ctx context.Context, printerID int64) (dbsqlc.GetPrinterRow, error)
+	ListPrinters(ctx context.Context) ([]dbsqlc.ListPrintersRow, error)
+	UpdatePrinter(ctx context.Context, arg dbsqlc.UpdatePrinterParams) (dbsqlc.Printer, error)
+	// Projectors
+	CreateProjector(ctx context.Context, arg dbsqlc.CreateProjectorParams) (dbsqlc.Projector, error)
+	DeleteProjector(ctx context.Context, projectorID int64) error
+	GetProjector(ctx context.Context, projectorID int64) (dbsqlc.GetProjectorRow, error)
+	ListProjectors(ctx context.Context) ([]dbsqlc.ListProjectorsRow, error)
+	UpdateProjector(ctx context.Context, arg dbsqlc.UpdateProjectorParams) (dbsqlc.Projector, error)
+	// Projector Models
+	CreateProjectorModel(ctx context.Context, arg dbsqlc.CreateProjectorModelParams) (dbsqlc.ProjectorModel, error)
+	DeleteProjectorModel(ctx context.Context, projectorModelID int64) error
+	GetProjectorModel(ctx context.Context, projectorModelID int64) (dbsqlc.GetProjectorModelRow, error)
+	ListProjectorModels(ctx context.Context) ([]dbsqlc.ListProjectorModelsRow, error)
+	UpdateProjectorModel(ctx context.Context, arg dbsqlc.UpdateProjectorModelParams) (dbsqlc.ProjectorModel, error)
 	// Roles
 	CreateRole(ctx context.Context, arg dbsqlc.CreateRoleParams) (dbsqlc.Role, error)
 	DeleteRole(ctx context.Context, roleID string) error

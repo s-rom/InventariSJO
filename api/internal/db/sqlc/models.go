@@ -96,6 +96,133 @@ func (ns NullConnectionTypeEnum) Value() (driver.Value, error) {
 	return string(ns.ConnectionTypeEnum), nil
 }
 
+type DeviceStatusEnum string
+
+const (
+	DeviceStatusEnumActiu DeviceStatusEnum = "actiu"
+	DeviceStatusEnumBaixa DeviceStatusEnum = "baixa"
+)
+
+func (e *DeviceStatusEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = DeviceStatusEnum(s)
+	case string:
+		*e = DeviceStatusEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for DeviceStatusEnum: %T", src)
+	}
+	return nil
+}
+
+type NullDeviceStatusEnum struct {
+	DeviceStatusEnum DeviceStatusEnum `json:"device_status_enum"`
+	Valid            bool             `json:"valid"` // Valid is true if DeviceStatusEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullDeviceStatusEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.DeviceStatusEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.DeviceStatusEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullDeviceStatusEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.DeviceStatusEnum), nil
+}
+
+type PrintColorEnum string
+
+const (
+	PrintColorEnumColor PrintColorEnum = "Color"
+	PrintColorEnumBN    PrintColorEnum = "BN"
+)
+
+func (e *PrintColorEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PrintColorEnum(s)
+	case string:
+		*e = PrintColorEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PrintColorEnum: %T", src)
+	}
+	return nil
+}
+
+type NullPrintColorEnum struct {
+	PrintColorEnum PrintColorEnum `json:"print_color_enum"`
+	Valid          bool           `json:"valid"` // Valid is true if PrintColorEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPrintColorEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.PrintColorEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PrintColorEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPrintColorEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PrintColorEnum), nil
+}
+
+type PrinterTypeEnum string
+
+const (
+	PrinterTypeEnumToner   PrinterTypeEnum = "toner"
+	PrinterTypeEnumInk     PrinterTypeEnum = "ink"
+	PrinterTypeEnumManaged PrinterTypeEnum = "managed"
+)
+
+func (e *PrinterTypeEnum) Scan(src interface{}) error {
+	switch s := src.(type) {
+	case []byte:
+		*e = PrinterTypeEnum(s)
+	case string:
+		*e = PrinterTypeEnum(s)
+	default:
+		return fmt.Errorf("unsupported scan type for PrinterTypeEnum: %T", src)
+	}
+	return nil
+}
+
+type NullPrinterTypeEnum struct {
+	PrinterTypeEnum PrinterTypeEnum `json:"printer_type_enum"`
+	Valid           bool            `json:"valid"` // Valid is true if PrinterTypeEnum is not NULL
+}
+
+// Scan implements the Scanner interface.
+func (ns *NullPrinterTypeEnum) Scan(value interface{}) error {
+	if value == nil {
+		ns.PrinterTypeEnum, ns.Valid = "", false
+		return nil
+	}
+	ns.Valid = true
+	return ns.PrinterTypeEnum.Scan(value)
+}
+
+// Value implements the driver Valuer interface.
+func (ns NullPrinterTypeEnum) Value() (driver.Value, error) {
+	if !ns.Valid {
+		return nil, nil
+	}
+	return string(ns.PrinterTypeEnum), nil
+}
+
 type RamTypeEnum string
 
 const (
@@ -344,6 +471,59 @@ type LaptopStudentAssignment struct {
 type O struct {
 	OsID int64  `json:"os_id"`
 	Name string `json:"name"`
+}
+
+type Printer struct {
+	PrinterID            int64              `json:"printer_id"`
+	PrinterModelID       int64              `json:"printer_model_id"`
+	Status               DeviceStatusEnum   `json:"status"`
+	HasNetworkCapability bool               `json:"has_network_capability"`
+	UsesNetwork          bool               `json:"uses_network"`
+	IpAddress            pgtype.Text        `json:"ip_address"`
+	RoomID               pgtype.Int8        `json:"room_id"`
+	EquipmentUserID      pgtype.Int8        `json:"equipment_user_id"`
+	Observations         pgtype.Text        `json:"observations"`
+	CreatedByAppUserID   int64              `json:"created_by_app_user_id"`
+	CreatedAt            pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt            pgtype.Timestamptz `json:"updated_at"`
+}
+
+type PrinterModel struct {
+	PrinterModelID int64           `json:"printer_model_id"`
+	BrandID        int64           `json:"brand_id"`
+	ModelName      string          `json:"model_name"`
+	PrinterType    PrinterTypeEnum `json:"printer_type"`
+	PrintColor     PrintColorEnum  `json:"print_color"`
+}
+
+type PrinterModelSupply struct {
+	PrinterModelID  int64 `json:"printer_model_id"`
+	PrinterSupplyID int64 `json:"printer_supply_id"`
+}
+
+type PrinterSupply struct {
+	PrinterSupplyID int64           `json:"printer_supply_id"`
+	Name            string          `json:"name"`
+	SupplyType      PrinterTypeEnum `json:"supply_type"`
+}
+
+type Projector struct {
+	ProjectorID        int64              `json:"projector_id"`
+	ProjectorModelID   int64              `json:"projector_model_id"`
+	SerialNumber       pgtype.Text        `json:"serial_number"`
+	Status             DeviceStatusEnum   `json:"status"`
+	RoomID             pgtype.Int8        `json:"room_id"`
+	EquipmentUserID    pgtype.Int8        `json:"equipment_user_id"`
+	Observations       pgtype.Text        `json:"observations"`
+	CreatedByAppUserID int64              `json:"created_by_app_user_id"`
+	CreatedAt          pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
+}
+
+type ProjectorModel struct {
+	ProjectorModelID int64  `json:"projector_model_id"`
+	BrandID          int64  `json:"brand_id"`
+	ModelName        string `json:"model_name"`
 }
 
 type Role struct {

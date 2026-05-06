@@ -8,6 +8,8 @@ import NewDesktop  from './pages/NewDesktop';
 import NewLaptop   from './pages/NewLaptop';
 import Students    from './pages/Students';
 import Reference   from './pages/Reference';
+import Printers    from './pages/Printers';
+import Projectors  from './pages/Projectors';
 import Users       from './pages/Users';
 
 export const AuthContext = createContext({ role: null, username: null });
@@ -72,6 +74,8 @@ export default function App() {
                     <Route path="computers/new-laptop"  element={<RequireNonTutor role={role}><NewLaptop /></RequireNonTutor>} />
                     <Route path="students"             element={<Students />} />
                     <Route path="reference"            element={<RequireNonTutor role={role}><Reference /></RequireNonTutor>} />
+                    <Route path="printers"             element={<RequireNonTutor role={role}><Printers /></RequireNonTutor>} />
+                    <Route path="projectors"           element={<RequireNonTutor role={role}><Projectors /></RequireNonTutor>} />
                     <Route path="admin/users"          element={<RequireAdmin role={role}><Users /></RequireAdmin>} />
                     <Route path="*"                    element={<Navigate to={role === 'tutor' ? '/students' : '/computers'} replace />} />
                   </Routes>

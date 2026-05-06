@@ -147,6 +147,43 @@ export const api = {
   // ── Audit ─────────────────────────────────────────────
   getAuditLog: (table, recordId) => req(`/audit?table=${encodeURIComponent(table)}&record_id=${encodeURIComponent(recordId)}`),
 
+  // ── Printer Models ────────────────────────────────────
+  listPrinterModels:   ()         => req('/printer-models'),
+  getPrinterModel:     (id)       => req(`/printer-models/${id}`),
+  createPrinterModel:  (data)     => req('/printer-models', { method: 'POST',  body: JSON.stringify(data) }),
+  updatePrinterModel:  (id, data) => req(`/printer-models/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deletePrinterModel:  (id)       => req(`/printer-models/${id}`, { method: 'DELETE' }),
+  listSuppliesByModel: (modelId)  => req(`/printer-models/${modelId}/supplies`),
+  addSupplyToModel:    (modelId, data) => req(`/printer-models/${modelId}/supplies`, { method: 'POST', body: JSON.stringify(data) }),
+  removeSupplyFromModel: (modelId, supplyId) => req(`/printer-models/${modelId}/supplies/${supplyId}`, { method: 'DELETE' }),
+
+  // ── Printer Supplies (consumibles) ───────────────────
+  listPrinterSupplies:   ()         => req('/printer-supplies'),
+  createPrinterSupply:   (data)     => req('/printer-supplies', { method: 'POST',  body: JSON.stringify(data) }),
+  updatePrinterSupply:   (id, data) => req(`/printer-supplies/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deletePrinterSupply:   (id)       => req(`/printer-supplies/${id}`, { method: 'DELETE' }),
+
+  // ── Printers ──────────────────────────────────────────
+  listPrinters:   ()         => req('/printers'),
+  getPrinter:     (id)       => req(`/printers/${id}`),
+  createPrinter:  (data)     => req('/printers', { method: 'POST',  body: JSON.stringify(data) }),
+  updatePrinter:  (id, data) => req(`/printers/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deletePrinter:  (id)       => req(`/printers/${id}`, { method: 'DELETE' }),
+
+  // ── Projectors ────────────────────────────────────────
+  listProjectors:        ()         => req('/projectors'),
+  getProjector:          (id)       => req(`/projectors/${id}`),
+  createProjector:       (data)     => req('/projectors', { method: 'POST',  body: JSON.stringify(data) }),
+  updateProjector:       (id, data) => req(`/projectors/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteProjector:       (id)       => req(`/projectors/${id}`, { method: 'DELETE' }),
+
+  // ── Projector Models ──────────────────────────────────
+  listProjectorModels:   ()         => req('/projector-models'),
+  getProjectorModel:     (id)       => req(`/projector-models/${id}`),
+  createProjectorModel:  (data)     => req('/projector-models', { method: 'POST',  body: JSON.stringify(data) }),
+  updateProjectorModel:  (id, data) => req(`/projector-models/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  deleteProjectorModel:  (id)       => req(`/projector-models/${id}`, { method: 'DELETE' }),
+
   // ── Users (admin) ─────────────────────────────────────────
   listUsers:   ()             => req('/users'),
   createUser:  (data)         => req('/users', { method: 'POST',  body: JSON.stringify(data) }),

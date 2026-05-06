@@ -38,6 +38,11 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 	studentsH := handler.NewStudentsHandler(queries, logger)
 	assignmentsH := handler.NewAssignmentsHandler(queries, logger)
 	auditH := handler.NewAuditHandler(queries, logger)
+	printerModH := handler.NewPrinterModelsHandler(queries, logger)
+	printerSupH := handler.NewPrinterSuppliesHandler(queries, logger)
+	printersH := handler.NewPrintersHandler(queries, pool, logger)
+	projectorModH := handler.NewProjectorModelsHandler(queries, logger)
+	projectorsH := handler.NewProjectorsHandler(queries, pool, logger)
 
 	// ─── Auth (public) ────────────────────────────────────────────────────────
 	mux.HandleFunc("POST /auth/login", authH.Login)
@@ -160,6 +165,45 @@ func New(pool *pgxpool.Pool, logger *slog.Logger) http.Handler {
 
 	// ─── Audit ────────────────────────────────────────────────────────────────
 	mux.HandleFunc("GET /audit", auditH.Get)
+
+	// ─── Printer Models ───────────────────────────────────────────────────────
+	mux.HandleFunc("GET /printer-models", printerModH.List)
+	mux.HandleFunc("POST /printer-models", printerModH.Create)
+	mux.HandleFunc("GET /printer-models/{id}", printerModH.Get)
+	mux.HandleFunc("PATCH /printer-models/{id}", printerModH.Update)
+	mux.HandleFunc("DELETE /printer-models/{id}", printerModH.Delete)
+
+	// Supplies linked to a specific printer model
+	mux.HandleFunc("GET /printer-models/{modelId}/supplies", printerSupH.ListByModel)
+	mux.HandleFunc("POST /printer-models/{modelId}/supplies", printerSupH.AddToModel)
+	mux.HandleFunc("DELETE /printer-models/{modelId}/supplies/{supplyId}", printerSupH.RemoveFromModel)
+
+	// ─── Printer Supplies (consumibles) catalog ───────────────────────────────
+	mux.HandleFunc("GET /printer-supplies", printerSupH.List)
+	mux.HandleFunc("POST /printer-supplies", printerSupH.Create)
+	mux.HandleFunc("PATCH /printer-supplies/{id}", printerSupH.Update)
+	mux.HandleFunc("DELETE /printer-supplies/{id}", printerSupH.Delete)
+
+	// ─── Printers ─────────────────────────────────────────────────────────────
+	mux.HandleFunc("GET /printers", printersH.List)
+	mux.HandleFunc("POST /printers", printersH.Create)
+	mux.HandleFunc("GET /printers/{id}", printersH.Get)
+	mux.HandleFunc("PATCH /printers/{id}", printersH.Update)
+	mux.HandleFunc("DELETE /printers/{id}", printersH.Delete)
+
+	// ─── Projectors ───────────────────────────────────────────────────────────
+	mux.HandleFunc("GET /projectors", projectorsH.List)
+	mux.HandleFunc("POST /projectors", projectorsH.Create)
+	mux.HandleFunc("GET /projectors/{id}", projectorsH.Get)
+	mux.HandleFunc("PATCH /projectors/{id}", projectorsH.Update)
+	mux.HandleFunc("DELETE /projectors/{id}", projectorsH.Delete)
+
+	// ─── Projector Models ─────────────────────────────────────────────────────
+	mux.HandleFunc("GET /projector-models", projectorModH.List)
+	mux.HandleFunc("POST /projector-models", projectorModH.Create)
+	mux.HandleFunc("GET /projector-models/{id}", projectorModH.Get)
+	mux.HandleFunc("PATCH /projector-models/{id}", projectorModH.Update)
+	mux.HandleFunc("DELETE /projector-models/{id}", projectorModH.Delete)
 
 	return middleware.CORS(
 		middleware.Logger(logger)(

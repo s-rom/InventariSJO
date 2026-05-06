@@ -7,16 +7,19 @@ const RAM_TYPES     = ['DDR3', 'DDR4', 'DDR5', 'None'];
 const STORAGE_TYPES = ['HDD', 'SSD', 'NVMe', 'None'];
 
 const TABS = [
-  { id: 'cpus',       label: '💾 CPUs' },
-  { id: 'os',         label: '🖥 SO' },
-  { id: 'brands',     label: '🏷 Marques' },
-  { id: 'lmodels',    label: '💻 Models portàtil' },
-  { id: 'dmodels',    label: '🖥️ Models sobretaula' },
-  { id: 'equipusers', label: '👤 Usuaris equip' },
-  { id: 'centers',    label: '🏢 Centres' },
-  { id: 'rooms',      label: '🚪 Aules' },
-  { id: 'cycles',     label: '📚 Cicles' },
-  { id: 'classes',    label: '🎓 Cursos' },
+  { id: 'cpus',         label: '💾 CPUs' },
+  { id: 'os',           label: '🖥 SO' },
+  { id: 'brands',       label: '🏷 Marques' },
+  { id: 'lmodels',      label: '💻 Models portàtil' },
+  { id: 'dmodels',      label: '🖥️ Models sobretaula' },
+  { id: 'pmodels',      label: '🖨️ Models impressora' },
+  { id: 'psupplies',    label: '🖨️ Consumibles impressora' },
+  { id: 'equipusers',   label: '👤 Usuaris equip' },
+  { id: 'centers',      label: '🏢 Centres' },
+  { id: 'rooms',        label: '🚪 Aules' },
+  { id: 'cycles',       label: '📚 Cicles' },
+  { id: 'classes',      label: '🎓 Cursos' },
+  { id: 'prjmodels',    label: '📽️ Models projector' },
 ];
 
 // ─────────────────────────────────────────────
@@ -1141,6 +1144,418 @@ function ClassesTab() {
 
 // ─────────────────────────────────────────────
 // Main Reference page
+// ─────────────────────────────────────────────
+function PrinterModelsTab() {
+  const PRINTER_TYPES = ['toner', 'ink', 'managed'];
+
+  const [list, setList]     = useState([]);
+  const [refs, setRefs]     = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]       = useState('');
+  const [editing, setEditing] = useState(null);
+  const [editErr, setEditErr] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const cd = useConfirmDelete();
+
+  const EMPTY = { brand_id: null, model_name: '', printer_type: 'toner', print_color: 'Color' };
+  const [form, setForm] = useState(EMPTY);
+  function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+  const load = useCallback(() => api.listPrinterModels().then(d => setList(d ?? [])).catch(() => {}), []);
+  useEffect(() => {
+    load();
+    api.listBrands()
+      .then(brands => setRefs({ brandOpts: (brands ?? []).map(b => ({ value: b.brand_id, label: b.name })) }))
+      .catch(() => {});
+  }, [load]);
+
+  async function create(e) {
+    e.preventDefault(); setErr(''); setSaving(true);
+    try {
+      await api.createPrinterModel({ brand_id: form.brand_id, model_name: form.model_name, printer_type: form.printer_type, print_color: form.print_color });
+      setForm(EMPTY); load();
+    } catch (ex) { setErr(ex.message); }
+    finally { setSaving(false); }
+  }
+
+  async function saveEdit() {
+    setEditErr(''); setEditSaving(true);
+    try {
+      await api.updatePrinterModel(editing.printer_model_id, {
+        brand_id: editing.brand_id, model_name: editing.model_name,
+        printer_type: editing.printer_type, print_color: editing.print_color,
+      });
+      setEditing(null); load();
+    } catch (ex) { setEditErr(ex.message); }
+    finally { setEditSaving(false); }
+  }
+
+  async function del(id) {
+    try { await api.deletePrinterModel(id); load(); } catch (ex) { setErr(ex.message); }
+    cd.cancelDelete();
+  }
+
+  if (!refs) return <div className="empty">Carregant…</div>;
+
+  return (
+    <>
+      <Section title="Models d'impressora">
+        <div className="card" style={{ marginBottom: 14 }}>
+          <form onSubmit={create} className="form-panel">
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Marca *</label>
+                <Combobox options={refs.brandOpts} value={form.brand_id} onChange={v => setF('brand_id', v)} placeholder="Marca…" />
+              </div>
+              <div className="form-group">
+                <label>Nom del model *</label>
+                <input type="text" value={form.model_name} onChange={e => setF('model_name', e.target.value)} placeholder="LaserJet Pro M404n" required />
+              </div>
+              <div className="form-group">
+                <label>Tipus *</label>
+                <select value={form.printer_type} onChange={e => setF('printer_type', e.target.value)}>
+                  {PRINTER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Color</label>
+                <select value={form.print_color} onChange={e => setF('print_color', e.target.value)}>
+                  <option value="Color">Color</option>
+                  <option value="BN">Blanc i negre</option>
+                </select>
+              </div>
+            </div>
+            {err && <div className="error-msg">{err}</div>}
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={saving || !form.brand_id || !form.model_name}>
+                {saving ? '…' : 'Afegir model'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Marca</th><th>Model</th><th>Tipus</th><th>Color</th><th></th></tr></thead>
+              <tbody>
+                {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {list.map(m => (
+                  <tr key={m.printer_model_id}>
+                    <td>{m.brand_name}</td>
+                    <td>{m.model_name}</td>
+                    <td>{m.printer_type}</td>
+                    <td>{m.print_color}</td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {cd.isAsking(m.printer_model_id)
+                        ? <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
+                            <button className="btn btn-danger btn-sm" onClick={() => del(m.printer_model_id)}>Sí</button>
+                            <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
+                        : <>
+                            <button className="btn btn-ghost btn-sm" onClick={() => { setEditErr(''); setEditing({ ...m }); }}>Editar</button>
+                            <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(m.printer_model_id)}>Eliminar</button>
+                          </>
+                      }
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Section>
+
+      {editing && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setEditing(null); }}>
+          <div className="card" style={{ width: '100%', maxWidth: 500, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Editar model d'impressora</h2>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Marca *</label>
+                <Combobox options={refs.brandOpts} value={editing.brand_id} onChange={v => setEditing(e => ({ ...e, brand_id: v }))} placeholder="Marca…" />
+              </div>
+              <div className="form-group">
+                <label>Nom del model *</label>
+                <input type="text" value={editing.model_name} onChange={e => setEditing(v => ({ ...v, model_name: e.target.value }))} required autoFocus />
+              </div>
+              <div className="form-group">
+                <label>Tipus *</label>
+                <select value={editing.printer_type} onChange={e => setEditing(v => ({ ...v, printer_type: e.target.value }))}>
+                  {PRINTER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Color</label>
+                <select value={editing.print_color} onChange={e => setEditing(v => ({ ...v, print_color: e.target.value }))}>
+                  <option value="Color">Color</option>
+                  <option value="BN">Blanc i negre</option>
+                </select>
+              </div>
+            </div>
+            {editErr && <div className="error-msg" style={{ marginBottom: 12 }}>{editErr}</div>}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel·lar</button>
+              <button className="btn btn-primary" onClick={saveEdit} disabled={editSaving || !editing.brand_id || !editing.model_name}>{editSaving ? '…' : 'Guardar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────
+function PrinterSuppliesTab() {
+  const SUPPLY_TYPES = ['toner', 'ink'];
+
+  const [list, setList]     = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr]       = useState('');
+  const [editing, setEditing] = useState(null);
+  const [editErr, setEditErr] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const cd = useConfirmDelete();
+
+  const EMPTY = { name: '', supply_type: 'toner' };
+  const [form, setForm] = useState(EMPTY);
+  function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+  const load = useCallback(() => api.listPrinterSupplies().then(d => setList(d ?? [])).catch(() => {}), []);
+  useEffect(() => { load(); }, [load]);
+
+  async function create(e) {
+    e.preventDefault(); setErr(''); setSaving(true);
+    try { await api.createPrinterSupply({ name: form.name, supply_type: form.supply_type }); setForm(EMPTY); load(); }
+    catch (ex) { setErr(ex.message); }
+    finally { setSaving(false); }
+  }
+
+  async function saveEdit() {
+    setEditErr(''); setEditSaving(true);
+    try {
+      await api.updatePrinterSupply(editing.printer_supply_id, { name: editing.name, supply_type: editing.supply_type });
+      setEditing(null); load();
+    } catch (ex) { setEditErr(ex.message); }
+    finally { setEditSaving(false); }
+  }
+
+  async function del(id) {
+    try { await api.deletePrinterSupply(id); load(); } catch (ex) { setErr(ex.message); }
+    cd.cancelDelete();
+  }
+
+  return (
+    <>
+      <Section title="Consumibles d'impressora">
+        <div className="card" style={{ marginBottom: 14 }}>
+          <form onSubmit={create} className="form-panel">
+            <div className="form-grid" style={{ gridTemplateColumns: '1fr auto auto' }}>
+              <div className="form-group">
+                <label>Nom *</label>
+                <input type="text" value={form.name} onChange={e => setF('name', e.target.value)} placeholder="HP 85A, Epson T501 Cyan…" required />
+              </div>
+              <div className="form-group">
+                <label>Tipus *</label>
+                <select value={form.supply_type} onChange={e => setF('supply_type', e.target.value)}>
+                  {SUPPLY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ justifyContent: 'flex-end' }}>
+                <label style={{ visibility: 'hidden' }}>_</label>
+                <button type="submit" className="btn btn-primary" disabled={saving || !form.name}>{saving ? '…' : 'Afegir'}</button>
+              </div>
+            </div>
+            {err && <div className="error-msg">{err}</div>}
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Nom</th><th>Tipus</th><th></th></tr></thead>
+              <tbody>
+                {list.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {list.map(s => (
+                  <tr key={s.printer_supply_id}>
+                    <td>{s.name}</td>
+                    <td>{s.supply_type}</td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {cd.isAsking(s.printer_supply_id)
+                        ? <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
+                            <button className="btn btn-danger btn-sm" onClick={() => del(s.printer_supply_id)}>Sí</button>
+                            <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
+                        : <>
+                            <button className="btn btn-ghost btn-sm" onClick={() => { setEditErr(''); setEditing({ ...s }); }}>Editar</button>
+                            <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(s.printer_supply_id)}>Eliminar</button>
+                          </>
+                      }
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Section>
+
+      {editing && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setEditing(null); }}>
+          <div className="card" style={{ width: '100%', maxWidth: 400, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Editar consumible</h2>
+            <div className="form-group" style={{ marginBottom: 12 }}>
+              <label>Nom *</label>
+              <input type="text" value={editing.name} onChange={e => setEditing(v => ({ ...v, name: e.target.value }))} required autoFocus />
+            </div>
+            <div className="form-group" style={{ marginBottom: 16 }}>
+              <label>Tipus *</label>
+              <select value={editing.supply_type} onChange={e => setEditing(v => ({ ...v, supply_type: e.target.value }))}>
+                {SUPPLY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            {editErr && <div className="error-msg" style={{ marginBottom: 12 }}>{editErr}</div>}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel·lar</button>
+              <button className="btn btn-primary" onClick={saveEdit} disabled={editSaving || !editing.name}>{editSaving ? '…' : 'Guardar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ─────────────────────────────────────────────
+function ProjectorModelsTab() {
+  const [list, setList]       = useState([]);
+  const [refs, setRefs]       = useState(null);
+  const [saving, setSaving]   = useState(false);
+  const [err, setErr]         = useState('');
+  const [editing, setEditing] = useState(null);
+  const [editErr, setEditErr] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const cd = useConfirmDelete();
+
+  const EMPTY = { brand_id: null, model_name: '' };
+  const [form, setForm] = useState(EMPTY);
+  function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
+
+  const load = useCallback(() => api.listProjectorModels().then(d => setList(d ?? [])).catch(() => {}), []);
+  useEffect(() => {
+    load();
+    api.listBrands()
+      .then(brands => setRefs({ brandOpts: (brands ?? []).map(b => ({ value: b.brand_id, label: b.name })) }))
+      .catch(() => {});
+  }, [load]);
+
+  async function create(e) {
+    e.preventDefault(); setErr(''); setSaving(true);
+    try {
+      await api.createProjectorModel({ brand_id: form.brand_id, model_name: form.model_name });
+      setForm(EMPTY); load();
+    } catch (ex) { setErr(ex.message); }
+    finally { setSaving(false); }
+  }
+
+  async function saveEdit() {
+    setEditErr(''); setEditSaving(true);
+    try {
+      await api.updateProjectorModel(editing.projector_model_id, {
+        brand_id: editing.brand_id, model_name: editing.model_name,
+      });
+      setEditing(null); load();
+    } catch (ex) { setEditErr(ex.message); }
+    finally { setEditSaving(false); }
+  }
+
+  async function del(id) {
+    try { await api.deleteProjectorModel(id); load(); } catch (ex) { setErr(ex.message); }
+    cd.cancelDelete();
+  }
+
+  if (!refs) return <div className="empty">Carregant…</div>;
+
+  return (
+    <>
+      <Section title="Models de projector">
+        <div className="card" style={{ marginBottom: 14 }}>
+          <form onSubmit={create} className="form-panel">
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Marca *</label>
+                <Combobox options={refs.brandOpts} value={form.brand_id} onChange={v => setF('brand_id', v)} placeholder="Marca…" />
+              </div>
+              <div className="form-group">
+                <label>Nom del model *</label>
+                <input type="text" value={form.model_name} onChange={e => setF('model_name', e.target.value)} placeholder="EX3260" required />
+              </div>
+            </div>
+            {err && <div className="error-msg">{err}</div>}
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary" disabled={saving || !form.brand_id || !form.model_name}>
+                {saving ? '…' : 'Afegir model'}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <div className="card">
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Marca</th><th>Model</th><th></th></tr></thead>
+              <tbody>
+                {list.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {list.map(m => (
+                  <tr key={m.projector_model_id}>
+                    <td>{m.brand_name}</td>
+                    <td>{m.model_name}</td>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {cd.isAsking(m.projector_model_id)
+                        ? <><span style={{ fontSize: 12, marginRight: 8, color: 'var(--muted)' }}>Segur?</span>
+                            <button className="btn btn-danger btn-sm" onClick={() => del(m.projector_model_id)}>Sí</button>
+                            <button className="btn btn-ghost btn-sm" onClick={cd.cancelDelete}>No</button></>
+                        : <>
+                            <button className="btn btn-ghost btn-sm" onClick={() => { setEditErr(''); setEditing({ ...m }); }}>Editar</button>
+                            <button className="btn btn-danger btn-sm" style={{ marginLeft: 4 }} onClick={() => cd.askDelete(m.projector_model_id)}>Eliminar</button>
+                          </>
+                      }
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </Section>
+
+      {editing && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '32px 16px' }}
+          onClick={e => { if (e.target === e.currentTarget) setEditing(null); }}>
+          <div className="card" style={{ width: '100%', maxWidth: 440, padding: 24 }}>
+            <h2 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Editar model de projector</h2>
+            <div className="form-grid">
+              <div className="form-group">
+                <label>Marca *</label>
+                <Combobox options={refs.brandOpts} value={editing.brand_id} onChange={v => setEditing(e => ({ ...e, brand_id: v }))} placeholder="Marca…" />
+              </div>
+              <div className="form-group">
+                <label>Nom del model *</label>
+                <input type="text" value={editing.model_name} onChange={e => setEditing(v => ({ ...v, model_name: e.target.value }))} required autoFocus />
+              </div>
+            </div>
+            {editErr && <div className="error-msg" style={{ marginBottom: 12 }}>{editErr}</div>}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
+              <button className="btn btn-ghost" onClick={() => setEditing(null)}>Cancel·lar</button>
+              <button className="btn btn-primary" onClick={saveEdit} disabled={editSaving || !editing.brand_id || !editing.model_name}>{editSaving ? '…' : 'Guardar'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 export default function Reference() {
   const [tab, setTab] = useState('cpus');
 
@@ -1175,6 +1590,9 @@ export default function Reference() {
         {tab === 'rooms'      && <RoomsTab />}
         {tab === 'cycles'     && <CyclesTab />}
         {tab === 'classes'    && <ClassesTab />}
+        {tab === 'pmodels'    && <PrinterModelsTab />}
+        {tab === 'psupplies'  && <PrinterSuppliesTab />}
+        {tab === 'prjmodels'  && <ProjectorModelsTab />}
       </div>
     </>
   );

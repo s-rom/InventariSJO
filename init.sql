@@ -8,6 +8,9 @@ CREATE TYPE ram_type_enum        AS ENUM ('DDR3', 'DDR4', 'DDR5', 'None');
 CREATE TYPE storage_type_enum    AS ENUM ('HDD', 'SSD', 'NVMe', 'None');
 CREATE TYPE audit_event_enum     AS ENUM ('created', 'updated', 'deleted');
 CREATE TYPE connection_type_enum AS ENUM ('ethernet', 'wifi');
+CREATE TYPE printer_type_enum    AS ENUM ('toner', 'ink', 'managed');
+CREATE TYPE print_color_enum     AS ENUM ('Color', 'BN');
+CREATE TYPE device_status_enum   AS ENUM ('actiu', 'baixa');
 
 -- Torn per als portàtils d'alumnes: matí o tarda
 CREATE TYPE shift_enum AS ENUM ('morning', 'afternoon');
@@ -319,6 +322,121 @@ CREATE INDEX ON laptop_student_assignment (academic_year);
 
 
 -- ============================================================
+-- MODELS D'IMPRESSORA
+-- Defineix el model/família d'una impressora: tipus de tinta/tòner,
+-- si és en color, marca, etc.
+-- ============================================================
+CREATE TABLE printer_model (
+    printer_model_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    brand_id         BIGINT NOT NULL REFERENCES brand (brand_id),
+    model_name       TEXT NOT NULL,
+    printer_type     printer_type_enum NOT NULL,  -- 'toner', 'ink' o 'managed'
+    print_color      print_color_enum NOT NULL DEFAULT 'Color',
+
+    UNIQUE (brand_id, model_name)
+);
+
+CREATE INDEX ON printer_model (brand_id);
+
+
+-- ============================================================
+-- CATÀLEG DE CONSUMIBLES D'IMPRESSORA
+-- Toners, cartutxos de tinta, etc. compatibles.
+-- ============================================================
+CREATE TABLE printer_supply (
+    printer_supply_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    name              TEXT NOT NULL UNIQUE,     -- p.ex. 'HP 85A', 'Epson T501 Cyan'
+    supply_type       printer_type_enum NOT NULL -- 'toner' o 'ink' (no 'managed')
+);
+
+
+-- ============================================================
+-- COMPATIBILITAT: MODEL D'IMPRESSORA ↔ CONSUMIBLE
+-- Un model pot tenir diversos consumibles (CMYK, etc.)
+-- ============================================================
+CREATE TABLE printer_model_supply (
+    printer_model_id  BIGINT NOT NULL REFERENCES printer_model (printer_model_id) ON DELETE CASCADE,
+    printer_supply_id BIGINT NOT NULL REFERENCES printer_supply (printer_supply_id) ON DELETE CASCADE,
+    PRIMARY KEY (printer_model_id, printer_supply_id)
+);
+
+CREATE INDEX ON printer_model_supply (printer_supply_id);
+
+
+-- ============================================================
+-- IMPRESSORES (unitats físiques)
+-- ============================================================
+CREATE TABLE printer (
+    printer_id              BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    printer_model_id        BIGINT NOT NULL REFERENCES printer_model (printer_model_id),
+    status                  device_status_enum NOT NULL DEFAULT 'actiu',
+    -- Capacitat de xarxa: pot connectar-se a la xarxa?
+    has_network_capability  BOOLEAN NOT NULL DEFAULT FALSE,
+    -- S'está usant realment en xarxa (pot tenir capacitat però estar en local)
+    uses_network            BOOLEAN NOT NULL DEFAULT FALSE,
+    ip_address              TEXT DEFAULT NULL,
+    room_id                 BIGINT REFERENCES room (room_id) ON DELETE SET NULL,
+    equipment_user_id       BIGINT REFERENCES equipment_user (equipment_user_id) ON DELETE SET NULL,
+    observations            TEXT DEFAULT NULL,
+    created_by_app_user_id  BIGINT NOT NULL REFERENCES app_user (app_user_id),
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    -- Si no té capacitat de xarxa, no pot estar usant-la
+    CONSTRAINT printer_network_usage_check CHECK (
+        has_network_capability = TRUE OR uses_network = FALSE
+    ),
+    -- Si no té capacitat de xarxa, no pot tenir IP
+    CONSTRAINT printer_ip_check CHECK (
+        has_network_capability = TRUE OR ip_address IS NULL
+    )
+);
+
+CREATE INDEX ON printer (printer_model_id);
+CREATE INDEX ON printer (room_id);
+CREATE INDEX ON printer (equipment_user_id);
+CREATE INDEX ON printer (created_by_app_user_id);
+CREATE INDEX ON printer (status);
+
+
+-- ============================================================
+-- MODELS DE PROJECTOR
+-- ============================================================
+CREATE TABLE projector_model (
+    projector_model_id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    brand_id           BIGINT NOT NULL REFERENCES brand (brand_id),
+    model_name         TEXT NOT NULL,
+
+    UNIQUE (brand_id, model_name)
+);
+
+CREATE INDEX ON projector_model (brand_id);
+
+
+-- ============================================================
+-- PROJECTORS (unitats físiques)
+-- ============================================================
+CREATE TABLE projector (
+    projector_id            BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    projector_model_id      BIGINT NOT NULL REFERENCES projector_model (projector_model_id),
+    serial_number           TEXT UNIQUE DEFAULT NULL,
+    status                  device_status_enum NOT NULL DEFAULT 'actiu',
+    room_id                 BIGINT REFERENCES room (room_id) ON DELETE SET NULL,
+    equipment_user_id       BIGINT REFERENCES equipment_user (equipment_user_id) ON DELETE SET NULL,
+    observations            TEXT DEFAULT NULL,
+    created_by_app_user_id  BIGINT NOT NULL REFERENCES app_user (app_user_id),
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX ON projector (projector_model_id);
+CREATE INDEX ON projector (room_id);
+CREATE INDEX ON projector (equipment_user_id);
+CREATE INDEX ON projector (created_by_app_user_id);
+CREATE INDEX ON projector (status);
+
+
+-- ============================================================
 -- AUDITORIA GENERAL
 -- Cobreix qualsevol taula del model: computer, desktop, laptop,
 -- laptop_student_assignment, student, etc.
@@ -348,7 +466,9 @@ CREATE TABLE audit_log (
             'desktop_model', 'laptop_model', 'brand',
             'laptop_student_assignment', 'student', 'school_class', 'cycle',
             'equipment_user', 'room', 'center',
-            'cpu', 'os', 'app_user', 'role'
+            'cpu', 'os', 'app_user', 'role',
+            'printer', 'printer_model', 'printer_supply',
+            'projector', 'projector_model'
         )
     ),
     CONSTRAINT audit_log_values_check CHECK (
