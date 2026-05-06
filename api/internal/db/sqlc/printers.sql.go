@@ -497,7 +497,7 @@ SET
     ip_address             = COALESCE($5,             ip_address),
     room_id                = COALESCE($6,                room_id),
     equipment_user_id      = COALESCE($7,      equipment_user_id),
-    observations           = COALESCE($8,           observations),
+    observations           = $8,
     updated_at             = now()
 WHERE printer_id = $9
 RETURNING printer_id, printer_model_id, status, has_network_capability, uses_network, ip_address, room_id, equipment_user_id, observations, created_by_app_user_id, created_at, updated_at

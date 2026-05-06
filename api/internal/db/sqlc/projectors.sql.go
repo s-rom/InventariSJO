@@ -317,7 +317,7 @@ SET
     status             = COALESCE($3,             status),
     room_id            = COALESCE($4,            room_id),
     equipment_user_id  = COALESCE($5,  equipment_user_id),
-    observations       = COALESCE($6,       observations),
+    observations       = $6,
     updated_at         = now()
 WHERE projector_id = $7
 RETURNING projector_id, projector_model_id, serial_number, status, room_id, equipment_user_id, observations, created_by_app_user_id, created_at, updated_at

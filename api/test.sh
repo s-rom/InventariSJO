@@ -27,3 +27,11 @@ if [[ $INTEGRATION -eq 1 ]]; then
 else
     go test ./... -v
 fi
+
+
+if [[ $? -ne 0 ]]; then
+    echo "ERROR: Tests fallidos" >&2
+    exit 1
+else 
+    echo "Todos los tests ok!"
+fi

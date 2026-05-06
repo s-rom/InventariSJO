@@ -404,3 +404,129 @@ func (m *Querier) UpdateUser(ctx context.Context, arg dbsqlc.UpdateUserParams) (
 	v, _ := a.Get(0).(dbsqlc.UpdateUserRow)
 	return v, a.Error(1)
 }
+func (m *Querier) CreatePrinterModel(ctx context.Context, arg dbsqlc.CreatePrinterModelParams) (dbsqlc.PrinterModel, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.PrinterModel)
+	return v, a.Error(1)
+}
+func (m *Querier) DeletePrinterModel(ctx context.Context, id int64) error {
+	return m.Called(ctx, id).Error(0)
+}
+func (m *Querier) GetPrinterModel(ctx context.Context, id int64) (dbsqlc.GetPrinterModelRow, error) {
+	a := m.Called(ctx, id)
+	v, _ := a.Get(0).(dbsqlc.GetPrinterModelRow)
+	return v, a.Error(1)
+}
+func (m *Querier) ListPrinterModels(ctx context.Context) ([]dbsqlc.ListPrinterModelsRow, error) {
+	a := m.Called(ctx)
+	v, _ := a.Get(0).([]dbsqlc.ListPrinterModelsRow)
+	return v, a.Error(1)
+}
+func (m *Querier) UpdatePrinterModel(ctx context.Context, arg dbsqlc.UpdatePrinterModelParams) (dbsqlc.PrinterModel, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.PrinterModel)
+	return v, a.Error(1)
+}
+func (m *Querier) AddPrinterModelSupply(ctx context.Context, arg dbsqlc.AddPrinterModelSupplyParams) error {
+	return m.Called(ctx, arg).Error(0)
+}
+func (m *Querier) CreatePrinterSupply(ctx context.Context, arg dbsqlc.CreatePrinterSupplyParams) (dbsqlc.PrinterSupply, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.PrinterSupply)
+	return v, a.Error(1)
+}
+func (m *Querier) DeletePrinterSupply(ctx context.Context, id int64) error {
+	return m.Called(ctx, id).Error(0)
+}
+func (m *Querier) GetPrinterSupply(ctx context.Context, id int64) (dbsqlc.PrinterSupply, error) {
+	a := m.Called(ctx, id)
+	v, _ := a.Get(0).(dbsqlc.PrinterSupply)
+	return v, a.Error(1)
+}
+func (m *Querier) ListPrinterSupplies(ctx context.Context) ([]dbsqlc.PrinterSupply, error) {
+	a := m.Called(ctx)
+	v, _ := a.Get(0).([]dbsqlc.PrinterSupply)
+	return v, a.Error(1)
+}
+func (m *Querier) ListSuppliesByPrinterModel(ctx context.Context, printerModelID int64) ([]dbsqlc.PrinterSupply, error) {
+	a := m.Called(ctx, printerModelID)
+	v, _ := a.Get(0).([]dbsqlc.PrinterSupply)
+	return v, a.Error(1)
+}
+func (m *Querier) RemovePrinterModelSupply(ctx context.Context, arg dbsqlc.RemovePrinterModelSupplyParams) error {
+	return m.Called(ctx, arg).Error(0)
+}
+func (m *Querier) UpdatePrinterSupply(ctx context.Context, arg dbsqlc.UpdatePrinterSupplyParams) (dbsqlc.PrinterSupply, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.PrinterSupply)
+	return v, a.Error(1)
+}
+func (m *Querier) CreatePrinter(ctx context.Context, arg dbsqlc.CreatePrinterParams) (dbsqlc.Printer, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.Printer)
+	return v, a.Error(1)
+}
+func (m *Querier) DeletePrinter(ctx context.Context, id int64) error {
+	return m.Called(ctx, id).Error(0)
+}
+func (m *Querier) GetPrinter(ctx context.Context, id int64) (dbsqlc.GetPrinterRow, error) {
+	a := m.Called(ctx, id)
+	v, _ := a.Get(0).(dbsqlc.GetPrinterRow)
+	return v, a.Error(1)
+}
+func (m *Querier) ListPrinters(ctx context.Context) ([]dbsqlc.ListPrintersRow, error) {
+	a := m.Called(ctx)
+	v, _ := a.Get(0).([]dbsqlc.ListPrintersRow)
+	return v, a.Error(1)
+}
+func (m *Querier) UpdatePrinter(ctx context.Context, arg dbsqlc.UpdatePrinterParams) (dbsqlc.Printer, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.Printer)
+	return v, a.Error(1)
+}
+func (m *Querier) CreateProjectorModel(ctx context.Context, arg dbsqlc.CreateProjectorModelParams) (dbsqlc.ProjectorModel, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.ProjectorModel)
+	return v, a.Error(1)
+}
+func (m *Querier) DeleteProjectorModel(ctx context.Context, id int64) error {
+	return m.Called(ctx, id).Error(0)
+}
+func (m *Querier) GetProjectorModel(ctx context.Context, id int64) (dbsqlc.GetProjectorModelRow, error) {
+	a := m.Called(ctx, id)
+	v, _ := a.Get(0).(dbsqlc.GetProjectorModelRow)
+	return v, a.Error(1)
+}
+func (m *Querier) ListProjectorModels(ctx context.Context) ([]dbsqlc.ListProjectorModelsRow, error) {
+	a := m.Called(ctx)
+	v, _ := a.Get(0).([]dbsqlc.ListProjectorModelsRow)
+	return v, a.Error(1)
+}
+func (m *Querier) UpdateProjectorModel(ctx context.Context, arg dbsqlc.UpdateProjectorModelParams) (dbsqlc.ProjectorModel, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.ProjectorModel)
+	return v, a.Error(1)
+}
+func (m *Querier) CreateProjector(ctx context.Context, arg dbsqlc.CreateProjectorParams) (dbsqlc.Projector, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.Projector)
+	return v, a.Error(1)
+}
+func (m *Querier) DeleteProjector(ctx context.Context, id int64) error {
+	return m.Called(ctx, id).Error(0)
+}
+func (m *Querier) GetProjector(ctx context.Context, id int64) (dbsqlc.GetProjectorRow, error) {
+	a := m.Called(ctx, id)
+	v, _ := a.Get(0).(dbsqlc.GetProjectorRow)
+	return v, a.Error(1)
+}
+func (m *Querier) ListProjectors(ctx context.Context) ([]dbsqlc.ListProjectorsRow, error) {
+	a := m.Called(ctx)
+	v, _ := a.Get(0).([]dbsqlc.ListProjectorsRow)
+	return v, a.Error(1)
+}
+func (m *Querier) UpdateProjector(ctx context.Context, arg dbsqlc.UpdateProjectorParams) (dbsqlc.Projector, error) {
+	a := m.Called(ctx, arg)
+	v, _ := a.Get(0).(dbsqlc.Projector)
+	return v, a.Error(1)
+}
