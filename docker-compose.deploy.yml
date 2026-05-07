@@ -3,15 +3,9 @@
 #
 # Variables necesarias en .env:
 #   DB_USER, DB_PASSWORD, DB_NAME
-#   DUCKDNS_TOKEN   (token de duckdns.org)
-#   ACME_EMAIL      (tu email para Let's Encrypt)
 #
-# Primer arranque:
+# Arranque:
 #   docker compose -f docker-compose.deploy.yml up -d --build
-#
-# Tras ~2 minutos certbot obtendra el certificado de Let's Encrypt.
-# Reinicia el frontend para activarlo:
-#   docker compose -f docker-compose.deploy.yml restart frontend
 
 services:
   api:
@@ -26,31 +20,14 @@ services:
     networks:
       - app
 
-  certbot:
-    build:
-      context: ./certbot
-      dockerfile: Dockerfile
-    volumes:
-      - certbot_certs:/etc/letsencrypt
-      - ./certbot/renew.sh:/renew.sh:ro
-    environment:
-      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN}
-      - ACME_EMAIL=${ACME_EMAIL}
-    entrypoint: ["/bin/sh", "/renew.sh"]
-    restart: unless-stopped
-
   frontend:
     build:
       context: ./frontend-app
       dockerfile: Dockerfile.prod
     ports:
       - "80:80"
-      - "443:443"
-    volumes:
-      - certbot_certs:/etc/letsencrypt:ro
     depends_on:
       - api
-      - certbot
     restart: unless-stopped
     networks:
       - app
@@ -58,6 +35,3 @@ services:
 networks:
   app:
     driver: bridge
-
-volumes:
-  certbot_certs:
