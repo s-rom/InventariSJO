@@ -17,6 +17,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import { useAuth } from '../App';
 import EditComputerModal from '../components/EditComputerModal';
+import Pagination from '../components/Pagination';
 
 function osEmoji(name = '') {
   const n = (name ?? '').toLowerCase();
@@ -375,29 +376,15 @@ export default function Computers() {
                 </tbody>
               </table>
             </div>
-            {/* Paginación sobremesas */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 12 }}>
-              <button className="btn btn-sm" disabled={desktopPage === 1} onClick={() => setDesktopPage(1)}>&lt;&lt;</button>
-              <button className="btn btn-sm" disabled={desktopPage === 1} onClick={() => setDesktopPage(desktopPage - 1)}>Anterior</button>
-              <span>Pàgina {desktopPage} de {totalDesktopPages}</span>
-              <button className="btn btn-sm" disabled={desktopPage === totalDesktopPages} onClick={() => setDesktopPage(desktopPage + 1)}>Següent</button>
-              <button className="btn btn-sm" disabled={desktopPage === totalDesktopPages} onClick={() => setDesktopPage(totalDesktopPages)}>&gt;&gt;</button>
-              <label htmlFor="desktop-page-size-select" style={{ marginLeft: 16 }}>Mostrar:</label>
-              <select
-                id="desktop-page-size-select"
-                value={desktopPageSize}
-                onChange={e => {
-                  setDesktopPageSize(Number(e.target.value));
-                  setDesktopPage(1);
-                }}
-                className="filter-select"
-                style={{ minWidth: 70 }}
-              >
-                {[10, 20, 50, 100].map(n => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
+            {/* Paginació sobretaules */}
+            <Pagination
+              page={desktopPage}
+              totalPages={totalDesktopPages}
+              pageSize={desktopPageSize}
+              onPage={setDesktopPage}
+              onPageSize={setDesktopPageSize}
+              pageSizeId="desktop-page-size"
+            />
           </>
         )}
       </div>
@@ -491,29 +478,15 @@ export default function Computers() {
                 </tbody>
               </table>
             </div>
-            {/* Paginación portátiles */}
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 12 }}>
-              <button className="btn btn-sm" disabled={laptopPage === 1} onClick={() => setLaptopPage(1)}>&lt;&lt;</button>
-              <button className="btn btn-sm" disabled={laptopPage === 1} onClick={() => setLaptopPage(laptopPage - 1)}>Anterior</button>
-              <span>Pàgina {laptopPage} de {totalLaptopPages}</span>
-              <button className="btn btn-sm" disabled={laptopPage === totalLaptopPages} onClick={() => setLaptopPage(laptopPage + 1)}>Següent</button>
-              <button className="btn btn-sm" disabled={laptopPage === totalLaptopPages} onClick={() => setLaptopPage(totalLaptopPages)}>&gt;&gt;</button>
-              <label htmlFor="laptop-page-size-select" style={{ marginLeft: 16 }}>Mostrar:</label>
-              <select
-                id="laptop-page-size-select"
-                value={laptopPageSize}
-                onChange={e => {
-                  setLaptopPageSize(Number(e.target.value));
-                  setLaptopPage(1);
-                }}
-                className="filter-select"
-                style={{ minWidth: 70 }}
-              >
-                {[10, 20, 50, 100].map(n => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
+            {/* Paginació portàtils */}
+            <Pagination
+              page={laptopPage}
+              totalPages={totalLaptopPages}
+              pageSize={laptopPageSize}
+              onPage={setLaptopPage}
+              onPageSize={setLaptopPageSize}
+              pageSizeId="laptop-page-size"
+            />
           </>
         )}
       </div>

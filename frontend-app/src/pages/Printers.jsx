@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { api } from '../api';
 import { useAuth } from '../App';
 import Combobox from '../components/Combobox';
+import StatusBadge from '../components/StatusBadge';
+import Pagination from '../components/Pagination';
 
 const PRINTER_TYPES  = ['toner', 'ink', 'managed'];
 const DEVICE_STATUSES = ['actiu', 'baixa'];
@@ -16,23 +18,6 @@ const EMPTY = {
   equipment_user_id:      null,
   observations:           '',
 };
-
-function StatusBadge({ status }) {
-  const ok = status === 'actiu';
-  return (
-    <span style={{
-      display: 'inline-block',
-      padding: '2px 8px',
-      borderRadius: 999,
-      fontSize: 11,
-      fontWeight: 600,
-      background: ok ? 'var(--success-bg, #d1fae5)' : 'var(--danger-bg, #fee2e2)',
-      color: ok ? 'var(--success, #065f46)' : 'var(--danger, #991b1b)',
-    }}>
-      {ok ? 'Actiu' : 'Baixa'}
-    </span>
-  );
-}
 
 function EditModal({ printer, refs, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -158,6 +143,8 @@ export default function Printers() {
   const [showNew,   setShowNew]   = useState(false);
   const [delId,     setDelId]     = useState(null);
   const [toast,     setToast]     = useState(null);
+  const [page,      setPage]      = useState(1);
+  const [pageSize,  setPageSize]  = useState(20);
   const toastTimer = useRef(null);
 
   function showToast(type, msg) {
@@ -185,7 +172,8 @@ export default function Printers() {
       const modelOpts = (models ?? []).map(m => ({ value: m.printer_model_id, label: `${m.brand_name} ${m.model_name} (${m.printer_type}, ${m.print_color})` }));
       const equipOpts = (equip  ?? []).map(e => ({ value: e.equipment_user_id, label: e.name }));
       const roomOpts  = allRooms.map(r => ({ value: r.room_id, label: `${r.centerName} › ${r.name}` }));
-      setRefs({ modelOpts, equipOpts, roomOpts });
+      const roomMap   = Object.fromEntries(allRooms.map(r => [r.room_id, `${r.centerName} › ${r.name}`]));
+      setRefs({ modelOpts, equipOpts, roomOpts, roomMap });
       setPrinters(data ?? []);
     } catch (e) {
       setErr(e.message);
@@ -202,11 +190,14 @@ export default function Printers() {
     return (
       (p.model_name ?? '').toLowerCase().includes(q) ||
       (p.brand_name ?? '').toLowerCase().includes(q) ||
-      (p.room_name  ?? '').toLowerCase().includes(q) ||
+      (refs?.roomMap?.[p.room_id] ?? p.room_name ?? '').toLowerCase().includes(q) ||
       (p.ip_address ?? '').toLowerCase().includes(q) ||
       (p.equipment_user_name ?? '').toLowerCase().includes(q)
     );
   });
+
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
 
   async function handleDelete(id) {
     try {
@@ -256,10 +247,10 @@ export default function Printers() {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && (
+              {paged.length === 0 && (
                 <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--muted)', padding: 20 }}>Sense impressores</td></tr>
               )}
-              {filtered.map(p => (
+              {paged.map(p => (
                 <tr key={p.printer_id}>
                   <td style={{ color: 'var(--muted)', fontSize: 12 }}>#{p.printer_id}</td>
                   <td><strong>{p.brand_name}</strong> {p.model_name}</td>
@@ -271,7 +262,7 @@ export default function Printers() {
                       : '—'}
                   </td>
                   <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{p.ip_address ?? '—'}</td>
-                  <td>{p.room_name ?? '—'}</td>
+                  <td>{refs?.roomMap?.[p.room_id] ?? '—'}</td>
                   <td>{p.equipment_user_name ?? '—'}</td>
                   <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
                     {canEdit && (
@@ -292,6 +283,14 @@ export default function Printers() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          pageSize={pageSize}
+          onPage={setPage}
+          onPageSize={setPageSize}
+          pageSizeId="printers-page-size"
+        />
       </div>
 
       {editItem && refs && (
