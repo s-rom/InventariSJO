@@ -54,6 +54,7 @@ function CpusTab() {
   const [editing, setEditing]     = useState(null); // { cpu_id, model_name, benchmark_score }
   const [editErr, setEditErr]     = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
 
   const load = useCallback(() => api.listCpus().then(d => setList(d ?? [])).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
@@ -79,6 +80,11 @@ function CpusTab() {
     finally { setEditSaving(false); }
   }
 
+  const visible = !searchQ ? list : list.filter(c =>
+    (c.model_name ?? '').toLowerCase().includes(searchQ.toLowerCase()) ||
+    String(c.benchmark_score ?? '').includes(searchQ)
+  );
+
   return (
     <>
       <Section title="CPUs">
@@ -102,13 +108,17 @@ function CpusTab() {
           </form>
         </div>
 
+        <div style={{ marginBottom: 8 }}>
+          <input type="search" placeholder="Filtrar CPUs…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+            style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+        </div>
         <div className="card">
           <div className="table-wrap">
             <table>
               <thead><tr><th>Model</th><th>Benchmark</th><th></th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-                {list.map(c => (
+                {visible.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {visible.map(c => (
                   <tr key={c.cpu_id}>
                     <td>{c.model_name}</td>
                     <td>{c.benchmark_score ?? '—'}</td>
@@ -159,6 +169,7 @@ function OsTab() {
   const [editing, setEditing]     = useState(null); // { os_id, name }
   const [editErr, setEditErr]     = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
 
   const load = useCallback(() => api.listOS().then(d => setList(d ?? [])).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
@@ -179,6 +190,10 @@ function OsTab() {
     finally { setEditSaving(false); }
   }
 
+  const visible = !searchQ ? list : list.filter(o =>
+    (o.name ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
+
   return (
     <>
       <Section title="Sistemes Operatius">
@@ -198,13 +213,17 @@ function OsTab() {
           </form>
         </div>
 
+        <div style={{ marginBottom: 8 }}>
+          <input type="search" placeholder="Filtrar SO…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+            style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+        </div>
         <div className="card">
           <div className="table-wrap">
             <table>
               <thead><tr><th>Nom</th><th></th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-                {list.map(o => (
+                {visible.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {visible.map(o => (
                   <tr key={o.os_id}>
                     <td>{o.name}</td>
                     <td style={{ textAlign: 'right' }}>
@@ -247,6 +266,7 @@ function BrandsTab() {
   const [name, setName]     = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr]       = useState('');
+  const [searchQ, setSearchQ] = useState('');
 
   const load = useCallback(() => api.listBrands().then(d => setList(d ?? [])).catch(() => {}), []);
   useEffect(() => { load(); }, [load]);
@@ -257,6 +277,10 @@ function BrandsTab() {
     catch (ex) { setErr(ex.message); }
     finally { setSaving(false); }
   }
+
+  const visible = !searchQ ? list : list.filter(b =>
+    (b.name ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
 
   return (
     <Section title="Marques">
@@ -276,13 +300,17 @@ function BrandsTab() {
         </form>
       </div>
 
+      <div style={{ marginBottom: 8 }}>
+        <input type="search" placeholder="Filtrar marques…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+          style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+      </div>
       <div className="card">
         <div className="table-wrap">
           <table>
             <thead><tr><th>Nom</th><th></th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-              {list.map(b => (
+              {visible.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {visible.map(b => (
                 <tr key={b.brand_id}>
                   <td>{b.name}</td>
                   <td></td>
@@ -308,6 +336,7 @@ function LaptopModelsTab() {
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   const load = useCallback(() => api.listLaptopModels().then(d => setList(d ?? [])).catch(() => {}), []);
+  const [searchQ, setSearchQ] = useState('');
   useEffect(() => {
     load();
     Promise.all([api.listBrands(), api.listCpus(), api.listOS()])
@@ -339,6 +368,11 @@ function LaptopModelsTab() {
 
   if (!refs) return <div className="empty">Carregant…</div>;
   const R = refs;
+
+  const visible = !searchQ ? list : list.filter(m =>
+    (m.brand_name ?? '').toLowerCase().includes(searchQ.toLowerCase()) ||
+    (m.model_name ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
 
   return (
     <Section title="Models de portàtil">
@@ -392,13 +426,17 @@ function LaptopModelsTab() {
         </form>
       </div>
 
+      <div style={{ marginBottom: 8 }}>
+        <input type="search" placeholder="Filtrar models portàtil…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+          style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+      </div>
       <div className="card">
         <div className="table-wrap">
           <table>
             <thead><tr><th>Marca</th><th>Model</th><th>RAM</th><th>Emmagatzematge</th><th></th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-              {list.map(m => (
+              {visible.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {visible.map(m => (
                 <tr key={m.laptop_model_id}>
                   <td>{m.brand_name}</td>
                   <td>{m.model_name}</td>
@@ -428,6 +466,7 @@ function DesktopModelsTab() {
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   const load = useCallback(() => api.listDesktopModels().then(d => setList(d ?? [])).catch(() => {}), []);
+  const [searchQ, setSearchQ] = useState('');
   useEffect(() => {
     load();
     Promise.all([api.listBrands(), api.listCpus(), api.listOS()])
@@ -464,6 +503,11 @@ function DesktopModelsTab() {
 
   if (!refs) return <div className="empty">Carregant…</div>;
   const R = refs;
+
+  const visible = !searchQ ? list : list.filter(m =>
+    (m.brand_name ?? '').toLowerCase().includes(searchQ.toLowerCase()) ||
+    (m.model_name ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
 
   return (
     <Section title="Models de sobretaula">
@@ -517,13 +561,17 @@ function DesktopModelsTab() {
         </form>
       </div>
 
+      <div style={{ marginBottom: 8 }}>
+        <input type="search" placeholder="Filtrar models sobretaula…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+          style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+      </div>
       <div className="card">
         <div className="table-wrap">
           <table>
             <thead><tr><th>Marca</th><th>Model</th><th>RAM</th><th>Emmagatzematge</th><th></th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-              {list.map(m => (
+              {visible.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {visible.map(m => (
                 <tr key={m.desktop_model_id}>
                   <td>{m.brand_name}</td>
                   <td>{m.model_name}</td>
@@ -558,6 +606,7 @@ function EquipUsersTab() {
   const cd                    = useConfirmDelete();
 
   const load = useCallback(() => api.listEquipmentUsers().then(d => setList(d ?? [])).catch(() => {}), []);
+  const [searchQ, setSearchQ] = useState('');
   useEffect(() => { load(); }, [load]);
 
   async function create(e) {
@@ -577,6 +626,10 @@ function EquipUsersTab() {
     cd.cancelDelete();
   }
 
+  const visible = !searchQ ? list : list.filter(u =>
+    (u.name ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
+
   return (
     <Section title="Usuaris d'equip">
       <div className="card" style={{ marginBottom: 14 }}>
@@ -594,13 +647,17 @@ function EquipUsersTab() {
           {err && <div className="error-msg">{err}</div>}
         </form>
       </div>
+      <div style={{ marginBottom: 8 }}>
+        <input type="search" placeholder="Filtrar usuaris…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+          style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+      </div>
       <div className="card">
         <div className="table-wrap">
           <table>
             <thead><tr><th>Nom</th><th></th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-              {list.map(u => (
+              {visible.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {visible.map(u => (
                 <tr key={u.equipment_user_id}>
                   <td>
                     {editId === u.equipment_user_id
@@ -645,6 +702,7 @@ function CentersTab() {
   const cd                      = useConfirmDelete();
 
   const load = useCallback(() => api.listCenters().then(d => setList(d ?? [])).catch(() => {}), []);
+  const [searchQ, setSearchQ] = useState('');
   useEffect(() => { load(); }, [load]);
 
   async function create(e) {
@@ -664,6 +722,10 @@ function CentersTab() {
     cd.cancelDelete();
   }
 
+  const visible = !searchQ ? list : list.filter(c =>
+    (c.name ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
+
   return (
     <Section title="Centres">
       <div className="card" style={{ marginBottom: 14 }}>
@@ -681,13 +743,17 @@ function CentersTab() {
           {err && <div className="error-msg">{err}</div>}
         </form>
       </div>
+      <div style={{ marginBottom: 8 }}>
+        <input type="search" placeholder="Filtrar centres…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+          style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+      </div>
       <div className="card">
         <div className="table-wrap">
           <table>
             <thead><tr><th>Nom</th><th></th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-              {list.map(c => (
+              {visible.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {visible.map(c => (
                 <tr key={c.center_id}>
                   <td>
                     {editId === c.center_id
@@ -731,6 +797,7 @@ function RoomsTab() {
   const [editName, setEditName]       = useState('');
   const [saving, setSaving]           = useState(false);
   const [err, setErr]                 = useState('');
+  const [searchQ, setSearchQ]         = useState('');
   const cd                            = useConfirmDelete();
 
   useEffect(() => {
@@ -797,11 +864,17 @@ function RoomsTab() {
           </div>
           <div className="card">
             <div className="table-wrap">
+              <div style={{ padding: '10px 12px 4px' }}>
+                <input type="search" placeholder="Filtrar aules…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+                  style={{ width: '100%', maxWidth: 260, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+              </div>
               <table>
                 <thead><tr><th>Aula</th><th></th></tr></thead>
                 <tbody>
-                  {rooms.length === 0 && <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense aules per aquest centre.</td></tr>}
-                  {rooms.map(r => (
+                  {rooms.filter(r => !searchQ || r.name.toLowerCase().includes(searchQ.toLowerCase())).length === 0 && (
+                    <tr><td colSpan={2} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense aules per aquest centre.</td></tr>
+                  )}
+                  {rooms.filter(r => !searchQ || r.name.toLowerCase().includes(searchQ.toLowerCase())).map(r => (
                     <tr key={r.room_id}>
                       <td>
                         {editId === r.room_id
@@ -845,6 +918,7 @@ function CyclesTab() {
   const [err, setErr]     = useState('');
 
   const load = useCallback(() => api.listCycles().then(d => setList(d ?? [])).catch(() => {}), []);
+  const [searchQ, setSearchQ] = useState('');
   useEffect(() => { load(); }, [load]);
 
   async function create(e) {
@@ -853,6 +927,10 @@ function CyclesTab() {
     catch (ex) { setErr(ex.message); }
     finally { setSaving(false); }
   }
+
+  const visible = !searchQ ? list : list.filter(c =>
+    (c.name ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
 
   return (
     <Section title="Cicles formatius">
@@ -871,13 +949,17 @@ function CyclesTab() {
           {err && <div className="error-msg">{err}</div>}
         </form>
       </div>
+      <div style={{ marginBottom: 8 }}>
+        <input type="search" placeholder="Filtrar cicles…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+          style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+      </div>
       <div className="card">
         <div className="table-wrap">
           <table>
             <thead><tr><th>Nom</th></tr></thead>
             <tbody>
-              {list.length === 0 && <tr><td style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-              {list.map(c => (
+              {visible.length === 0 && <tr><td style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+              {visible.map(c => (
                 <tr key={c.cycle_id}>
                   <td>{c.name}</td>
                 </tr>
@@ -1164,6 +1246,7 @@ function PrinterModelsTab() {
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   const load = useCallback(() => api.listPrinterModels().then(d => setList(d ?? [])).catch(() => {}), []);
+  const [searchQ, setSearchQ] = useState('');
   useEffect(() => {
     load();
     Promise.all([api.listBrands(), api.listPrinterSupplies()])
@@ -1227,6 +1310,12 @@ function PrinterModelsTab() {
 
   if (!refs) return <div className="empty">Carregant…</div>;
 
+  const visible = !searchQ ? list : list.filter(m =>
+    (m.brand_name ?? '').toLowerCase().includes(searchQ.toLowerCase()) ||
+    (m.model_name ?? '').toLowerCase().includes(searchQ.toLowerCase()) ||
+    (m.printer_type ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
+
   return (
     <>
       <Section title="Models d'impressora">
@@ -1264,13 +1353,17 @@ function PrinterModelsTab() {
           </form>
         </div>
 
+        <div style={{ marginBottom: 8 }}>
+          <input type="search" placeholder="Filtrar models impressora…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+            style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+        </div>
         <div className="card">
           <div className="table-wrap">
             <table>
               <thead><tr><th>Marca</th><th>Model</th><th>Tipus</th><th>Color</th><th></th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-                {list.map(m => (
+                {visible.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {visible.map(m => (
                   <tr key={m.printer_model_id}>
                     <td>{m.brand_name}</td>
                     <td>{m.model_name}</td>
@@ -1384,6 +1477,7 @@ function PrinterSuppliesTab() {
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   const load = useCallback(() => api.listPrinterSupplies().then(d => setList(d ?? [])).catch(() => {}), []);
+  const [searchQ, setSearchQ] = useState('');
   useEffect(() => { load(); }, [load]);
 
   async function create(e) {
@@ -1406,6 +1500,11 @@ function PrinterSuppliesTab() {
     try { await api.deletePrinterSupply(id); load(); } catch (ex) { setErr(ex.message); }
     cd.cancelDelete();
   }
+
+  const visible = !searchQ ? list : list.filter(s =>
+    (s.name ?? '').toLowerCase().includes(searchQ.toLowerCase()) ||
+    (s.supply_type ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
 
   return (
     <>
@@ -1432,13 +1531,17 @@ function PrinterSuppliesTab() {
           </form>
         </div>
 
+        <div style={{ marginBottom: 8 }}>
+          <input type="search" placeholder="Filtrar consumibles…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+            style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+        </div>
         <div className="card">
           <div className="table-wrap">
             <table>
               <thead><tr><th>Nom</th><th>Tipus</th><th></th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-                {list.map(s => (
+                {visible.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {visible.map(s => (
                   <tr key={s.printer_supply_id}>
                     <td>{s.name}</td>
                     <td>{s.supply_type}</td>
@@ -1504,6 +1607,7 @@ function ProjectorModelsTab() {
   function setF(k, v) { setForm(f => ({ ...f, [k]: v })); }
 
   const load = useCallback(() => api.listProjectorModels().then(d => setList(d ?? [])).catch(() => {}), []);
+  const [searchQ, setSearchQ] = useState('');
   useEffect(() => {
     load();
     api.listBrands()
@@ -1538,6 +1642,11 @@ function ProjectorModelsTab() {
 
   if (!refs) return <div className="empty">Carregant…</div>;
 
+  const visible = !searchQ ? list : list.filter(m =>
+    (m.brand_name ?? '').toLowerCase().includes(searchQ.toLowerCase()) ||
+    (m.model_name ?? '').toLowerCase().includes(searchQ.toLowerCase())
+  );
+
   return (
     <>
       <Section title="Models de projector">
@@ -1562,13 +1671,17 @@ function ProjectorModelsTab() {
           </form>
         </div>
 
+        <div style={{ marginBottom: 8 }}>
+          <input type="search" placeholder="Filtrar models projector…" value={searchQ} onChange={e => setSearchQ(e.target.value)}
+            style={{ width: '100%', maxWidth: 280, padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13 }} />
+        </div>
         <div className="card">
           <div className="table-wrap">
             <table>
               <thead><tr><th>Marca</th><th>Model</th><th></th></tr></thead>
               <tbody>
-                {list.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
-                {list.map(m => (
+                {visible.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--muted)', padding: 16 }}>Sense dades</td></tr>}
+                {visible.map(m => (
                   <tr key={m.projector_model_id}>
                     <td>{m.brand_name}</td>
                     <td>{m.model_name}</td>

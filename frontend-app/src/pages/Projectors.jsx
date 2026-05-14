@@ -5,6 +5,19 @@ import Combobox from '../components/Combobox';
 import StatusBadge from '../components/StatusBadge';
 import Pagination from '../components/Pagination';
 
+function sortBy(arr, key, asc = true) {
+  return [...arr].sort((a, b) => {
+    const v1 = typeof key === 'function' ? key(a) : a[key];
+    const v2 = typeof key === 'function' ? key(b) : b[key];
+    if (v1 == null && v2 == null) return 0;
+    if (v1 == null) return 1;
+    if (v2 == null) return -1;
+    if (v1 < v2) return asc ? -1 : 1;
+    if (v1 > v2) return asc ? 1 : -1;
+    return 0;
+  });
+}
+
 const DEVICE_STATUSES = ['actiu', 'baixa'];
 
 const EMPTY = {
@@ -158,6 +171,11 @@ export default function Projectors() {
   const [toast,      setToast]      = useState(null);
   const [page,       setPage]       = useState(1);
   const [pageSize,   setPageSize]   = useState(20);
+  const [sortCol,        setSortCol]        = useState('id');
+  const [sortAsc,        setSortAsc]        = useState(true);
+  const [filterCenterId, setFilterCenterId] = useState('');
+  const [filterRoomId,   setFilterRoomId]   = useState('');
+  const [showFilters,    setShowFilters]    = useState(false);
   const toastTimer = useRef(null);
 
   function showToast(type, msg) {
@@ -177,7 +195,7 @@ export default function Projectors() {
       const roomsNested = await Promise.all(
         (centers ?? []).map(c =>
           api.listRoomsByCenter(c.center_id)
-            .then(rs => (rs ?? []).map(r => ({ ...r, centerName: c.name })))
+            .then(rs => (rs ?? []).map(r => ({ ...r, center_id: c.center_id, centerName: c.name })))
             .catch(() => [])
         )
       );
@@ -186,7 +204,7 @@ export default function Projectors() {
       const equipOpts = (equip  ?? []).map(e => ({ value: e.equipment_user_id, label: e.name }));
       const roomOpts  = allRooms.map(r => ({ value: r.room_id, label: `${r.centerName} › ${r.name}` }));
       const roomMap   = Object.fromEntries(allRooms.map(r => [r.room_id, `${r.centerName} › ${r.name}`]));
-      setRefs({ modelOpts, equipOpts, roomOpts, roomMap });
+      setRefs({ modelOpts, equipOpts, roomOpts, roomMap, centers: centers ?? [], allRooms });
       setProjectors(data ?? []);
     } catch (e) {
       setErr(e.message);
@@ -198,19 +216,37 @@ export default function Projectors() {
   useEffect(() => { load(); }, []); // eslint-disable-line
 
   const filtered = projectors.filter(p => {
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return (
-      (p.model_name  ?? '').toLowerCase().includes(q) ||
-      (p.brand_name  ?? '').toLowerCase().includes(q) ||
-      (refs?.roomMap?.[p.room_id] ?? p.room_name ?? '').toLowerCase().includes(q) ||
-      (p.serial_number ?? '').toLowerCase().includes(q) ||
-      (p.equipment_user_name ?? '').toLowerCase().includes(q)
-    );
+    if (query) {
+      const q = query.toLowerCase();
+      const textMatch = (
+        (p.model_name  ?? '').toLowerCase().includes(q) ||
+        (p.brand_name  ?? '').toLowerCase().includes(q) ||
+        (refs?.roomMap?.[p.room_id] ?? '').toLowerCase().includes(q) ||
+        (p.serial_number ?? '').toLowerCase().includes(q) ||
+        (p.equipment_user_name ?? '').toLowerCase().includes(q)
+      );
+      if (!textMatch) return false;
+    }
+    if (filterCenterId) {
+      const room = refs?.allRooms?.find(r => r.room_id === p.room_id);
+      if (!room || room.center_id !== Number(filterCenterId)) return false;
+    }
+    if (filterRoomId && p.room_id !== Number(filterRoomId)) return false;
+    return true;
   });
 
-  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
-  const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const sortKeyMap = {
+    id:     p => p.projector_id,
+    brand:  p => (p.brand_name ?? '').toLowerCase(),
+    model:  p => (p.model_name ?? '').toLowerCase(),
+    serial: p => (p.serial_number ?? '').toLowerCase(),
+    status: p => p.status ?? '',
+    aula:   p => (refs?.roomMap?.[p.room_id] ?? '').toLowerCase(),
+    user:   p => (p.equipment_user_name ?? '').toLowerCase(),
+  };
+  const sorted = sortBy(filtered, sortKeyMap[sortCol] ?? sortKeyMap.id, sortAsc);
+  const totalPages = Math.ceil(sorted.length / pageSize) || 1;
+  const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
 
   async function handleDelete(id) {
     try {
@@ -233,28 +269,98 @@ export default function Projectors() {
         )}
       </div>
 
-      <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: showFilters ? 0 : 16, flexWrap: 'wrap' }}>
         <input
           type="search"
           placeholder="Cercar per marca, model, aula…"
           value={query}
-          onChange={e => setQuery(e.target.value)}
-          style={{ width: '100%', maxWidth: 360 }}
+          onChange={e => { setQuery(e.target.value); setPage(1); }}
+          style={{ flex: '1 1 220px', maxWidth: 400, padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 14 }}
         />
+        {(() => {
+          const activeCount = [filterCenterId, filterRoomId].filter(Boolean).length;
+          return (
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontWeight: 500,
+                border: `1px solid ${activeCount > 0 ? 'var(--primary, #007bff)' : 'var(--border)'}`,
+                background: activeCount > 0 ? 'rgba(0,123,255,0.07)' : '#fff',
+                color: activeCount > 0 ? 'var(--primary, #007bff)' : 'inherit',
+                transition: 'all .15s',
+              }}
+            >
+              <span style={{ fontSize: 12 }}>⠇</span>
+              Filtres
+              {activeCount > 0 && (
+                <span style={{ background: 'var(--primary, #007bff)', color: '#fff', borderRadius: 10, fontSize: 11, padding: '1px 6px', lineHeight: 1.4 }}>{activeCount}</span>
+              )}
+              <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 2 }}>{showFilters ? '▲' : '▼'}</span>
+            </button>
+          );
+        })()}
+        {(query || filterCenterId || filterRoomId) && (
+          <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+            {filtered.length} resultat{filtered.length !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
+
+      {showFilters && (
+        <div style={{
+          background: '#fafafa', border: '1px solid var(--border)', borderRadius: 8,
+          padding: '12px 16px', marginBottom: 16,
+          display: 'flex', flexWrap: 'wrap', gap: '10px 16px', alignItems: 'center',
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>Ubicació:</span>
+          <select
+            value={filterCenterId}
+            onChange={e => { setFilterCenterId(e.target.value); setFilterRoomId(''); setPage(1); }}
+            style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, background: '#fff', maxWidth: 160 }}
+          >
+            <option value="">Tots els centres</option>
+            {(refs?.centers ?? []).map(c => <option key={c.center_id} value={c.center_id}>{c.name}</option>)}
+          </select>
+          <select
+            value={filterRoomId}
+            onChange={e => { setFilterRoomId(e.target.value); setPage(1); }}
+            style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, background: '#fff', maxWidth: 160 }}
+          >
+            <option value="">Totes les aules</option>
+            {(filterCenterId
+              ? (refs?.allRooms ?? []).filter(r => r.center_id === Number(filterCenterId))
+              : (refs?.allRooms ?? [])
+            ).map(r => <option key={r.room_id} value={r.room_id}>{r.name}</option>)}
+          </select>
+          {(filterCenterId || filterRoomId) && (
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: 12, marginLeft: 'auto' }}
+              onClick={() => { setFilterCenterId(''); setFilterRoomId(''); setPage(1); }}>
+              ✕ Netejar
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Marca</th>
-                <th>Model</th>
-                <th>Núm. sèrie</th>
-                <th>Estat</th>
-                <th>Aula</th>
-                <th>Usuari</th>
+                {[
+                  { col: 'id',     label: 'ID' },
+                  { col: 'brand',  label: 'Marca' },
+                  { col: 'model',  label: 'Model' },
+                  { col: 'serial', label: 'Núm. sèrie' },
+                  { col: 'status', label: 'Estat' },
+                  { col: 'aula',   label: 'Aula' },
+                  { col: 'user',   label: 'Usuari' },
+                ].map(({ col, label }) => (
+                  <th key={col} style={{ cursor: 'pointer', userSelect: 'none' }}
+                    onClick={() => { setSortCol(col); setSortAsc(sortCol === col ? !sortAsc : true); }}>
+                    {label} {sortCol === col && (sortAsc ? '▲' : '▼')}
+                  </th>
+                ))}
                 <th></th>
               </tr>
             </thead>

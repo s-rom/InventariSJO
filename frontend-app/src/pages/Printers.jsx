@@ -145,6 +145,9 @@ export default function Printers() {
   const [toast,     setToast]     = useState(null);
   const [page,      setPage]      = useState(1);
   const [pageSize,  setPageSize]  = useState(20);
+  const [filterCenterId, setFilterCenterId] = useState('');
+  const [filterRoomId,   setFilterRoomId]   = useState('');
+  const [showFilters,    setShowFilters]    = useState(false);
   const toastTimer = useRef(null);
 
   function showToast(type, msg) {
@@ -164,7 +167,7 @@ export default function Printers() {
       const roomsNested = await Promise.all(
         (centers ?? []).map(c =>
           api.listRoomsByCenter(c.center_id)
-            .then(rs => (rs ?? []).map(r => ({ ...r, centerName: c.name })))
+            .then(rs => (rs ?? []).map(r => ({ ...r, center_id: c.center_id, centerName: c.name })))
             .catch(() => [])
         )
       );
@@ -173,7 +176,7 @@ export default function Printers() {
       const equipOpts = (equip  ?? []).map(e => ({ value: e.equipment_user_id, label: e.name }));
       const roomOpts  = allRooms.map(r => ({ value: r.room_id, label: `${r.centerName} › ${r.name}` }));
       const roomMap   = Object.fromEntries(allRooms.map(r => [r.room_id, `${r.centerName} › ${r.name}`]));
-      setRefs({ modelOpts, equipOpts, roomOpts, roomMap });
+      setRefs({ modelOpts, equipOpts, roomOpts, roomMap, centers: centers ?? [], allRooms });
       setPrinters(data ?? []);
     } catch (e) {
       setErr(e.message);
@@ -185,15 +188,23 @@ export default function Printers() {
   useEffect(() => { load(); }, []); // eslint-disable-line
 
   const filtered = printers.filter(p => {
-    if (!query) return true;
-    const q = query.toLowerCase();
-    return (
-      (p.model_name ?? '').toLowerCase().includes(q) ||
-      (p.brand_name ?? '').toLowerCase().includes(q) ||
-      (refs?.roomMap?.[p.room_id] ?? p.room_name ?? '').toLowerCase().includes(q) ||
-      (p.ip_address ?? '').toLowerCase().includes(q) ||
-      (p.equipment_user_name ?? '').toLowerCase().includes(q)
-    );
+    if (query) {
+      const q = query.toLowerCase();
+      const textMatch = (
+        (p.model_name ?? '').toLowerCase().includes(q) ||
+        (p.brand_name ?? '').toLowerCase().includes(q) ||
+        (refs?.roomMap?.[p.room_id] ?? '').toLowerCase().includes(q) ||
+        (p.ip_address ?? '').toLowerCase().includes(q) ||
+        (p.equipment_user_name ?? '').toLowerCase().includes(q)
+      );
+      if (!textMatch) return false;
+    }
+    if (filterCenterId) {
+      const room = refs?.allRooms?.find(r => r.room_id === p.room_id);
+      if (!room || room.center_id !== Number(filterCenterId)) return false;
+    }
+    if (filterRoomId && p.room_id !== Number(filterRoomId)) return false;
+    return true;
   });
 
   const totalPages = Math.ceil(filtered.length / pageSize) || 1;
@@ -220,15 +231,78 @@ export default function Printers() {
         )}
       </div>
 
-      <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: showFilters ? 0 : 16, flexWrap: 'wrap' }}>
         <input
           type="search"
           placeholder="Cercar per model, aula, IP…"
           value={query}
-          onChange={e => setQuery(e.target.value)}
-          style={{ width: '100%', maxWidth: 360 }}
+          onChange={e => { setQuery(e.target.value); setPage(1); }}
+          style={{ flex: '1 1 220px', maxWidth: 400, padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 14 }}
         />
+        {(() => {
+          const activeCount = [filterCenterId, filterRoomId].filter(Boolean).length;
+          return (
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontWeight: 500,
+                border: `1px solid ${activeCount > 0 ? 'var(--primary, #007bff)' : 'var(--border)'}`,
+                background: activeCount > 0 ? 'rgba(0,123,255,0.07)' : '#fff',
+                color: activeCount > 0 ? 'var(--primary, #007bff)' : 'inherit',
+                transition: 'all .15s',
+              }}
+            >
+              <span style={{ fontSize: 12 }}>⠇</span>
+              Filtres
+              {activeCount > 0 && (
+                <span style={{ background: 'var(--primary, #007bff)', color: '#fff', borderRadius: 10, fontSize: 11, padding: '1px 6px', lineHeight: 1.4 }}>{activeCount}</span>
+              )}
+              <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 2 }}>{showFilters ? '▲' : '▼'}</span>
+            </button>
+          );
+        })()}
+        {(query || filterCenterId || filterRoomId) && (
+          <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+            {filtered.length} resultat{filtered.length !== 1 ? 's' : ''}
+          </span>
+        )}
       </div>
+
+      {showFilters && (
+        <div style={{
+          background: '#fafafa', border: '1px solid var(--border)', borderRadius: 8,
+          padding: '12px 16px', marginBottom: 16,
+          display: 'flex', flexWrap: 'wrap', gap: '10px 16px', alignItems: 'center',
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>Ubicació:</span>
+          <select
+            value={filterCenterId}
+            onChange={e => { setFilterCenterId(e.target.value); setFilterRoomId(''); setPage(1); }}
+            style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, background: '#fff', maxWidth: 160 }}
+          >
+            <option value="">Tots els centres</option>
+            {(refs?.centers ?? []).map(c => <option key={c.center_id} value={c.center_id}>{c.name}</option>)}
+          </select>
+          <select
+            value={filterRoomId}
+            onChange={e => { setFilterRoomId(e.target.value); setPage(1); }}
+            style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, background: '#fff', maxWidth: 160 }}
+          >
+            <option value="">Totes les aules</option>
+            {(filterCenterId
+              ? (refs?.allRooms ?? []).filter(r => r.center_id === Number(filterCenterId))
+              : (refs?.allRooms ?? [])
+            ).map(r => <option key={r.room_id} value={r.room_id}>{r.name}</option>)}
+          </select>
+          {(filterCenterId || filterRoomId) && (
+            <button className="btn btn-ghost btn-sm" style={{ fontSize: 12, marginLeft: 'auto' }}
+              onClick={() => { setFilterCenterId(''); setFilterRoomId(''); setPage(1); }}>
+              ✕ Netejar
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="card">
         <div className="table-wrap">

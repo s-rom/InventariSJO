@@ -61,6 +61,13 @@ export default function Computers() {
   const [auditLoading,   setAuditLoading]   = useState(false);
   const [sortCol, setSortCol] = useState('hostname');
   const [sortAsc, setSortAsc] = useState(true);
+  const [filterCenterId, setFilterCenterId] = useState('');
+  const [filterRoomId,   setFilterRoomId]   = useState('');
+  const [scoreEnabled,   setScoreEnabled]   = useState(false);
+  const [sliderScore,    setSliderScore]    = useState(5000);
+  const [ramEnabled,     setRamEnabled]     = useState(false);
+  const [sliderRam,      setSliderRam]      = useState(16);
+  const [showFilters,    setShowFilters]    = useState(false);
   const [desktopPage, setDesktopPage] = useState(1);
   const [laptopPage, setLaptopPage] = useState(1);
   const [desktopPageSize, setDesktopPageSize] = useState(20);
@@ -84,7 +91,7 @@ export default function Computers() {
         const roomsNested = await Promise.all(
           (centers ?? []).map(c =>
             api.listRoomsByCenter(c.center_id)
-              .then(rs => (rs ?? []).map(r => ({ ...r, centerName: c.name })))
+              .then(rs => (rs ?? []).map(r => ({ ...r, center_id: c.center_id, centerName: c.name })))
               .catch(() => [])
           )
         );
@@ -105,7 +112,7 @@ export default function Computers() {
         const lmOpts    = (lm     ?? []).map(m => ({ value: m.laptop_model_id,     label: `${m.brand_name} ${m.model_name}` }));
         const dmOpts    = (dm     ?? []).map(m => ({ value: m.desktop_model_id,    label: `${m.brand_name} ${m.model_name}` }));
 
-        setRefs({ cpuMap, cpuScoreMap, osMap, equipMap, roomMap, lmMap, dmMap, cpuOpts, osOpts, equipOpts, roomOpts, lmOpts, dmOpts });
+        setRefs({ cpuMap, cpuScoreMap, osMap, equipMap, roomMap, lmMap, dmMap, cpuOpts, osOpts, equipOpts, roomOpts, lmOpts, dmOpts, allRooms, centers: centers ?? [] });
         setDesktops(dt ?? []);
         setLaptops(lt ?? []);
       } catch (e) {
@@ -143,10 +150,41 @@ export default function Computers() {
 
   const R = refs;
 
+  // Slider max values derived from loaded data
+  const allScores = R ? [
+    ...desktops.filter(d => d.cpu_id && R.cpuScoreMap[d.cpu_id] != null).map(d => R.cpuScoreMap[d.cpu_id]),
+    ...laptops.filter(l => l.cpu_benchmark_score != null).map(l => l.cpu_benchmark_score),
+  ] : [];
+  const scoreMax = allScores.length > 0 ? Math.max(...allScores) : 10000;
+  const allRams = [...desktops, ...laptops].filter(x => x.ram_gb != null).map(x => x.ram_gb);
+  const ramMax  = allRams.length > 0 ? Math.max(...allRams) : 64;
+
+  const filterMaxScore = scoreEnabled ? sliderScore : null;
+  const filterMaxRam   = ramEnabled   ? sliderRam   : null;
+
+  function passesFilters(item, getScore) {
+    if (filterCenterId) {
+      const room = R.allRooms?.find(r => r.room_id === item.room_id);
+      if (!room || room.center_id !== Number(filterCenterId)) return false;
+    }
+    if (filterRoomId && item.room_id !== Number(filterRoomId)) return false;
+    if (filterMaxScore !== null) {
+      const sc = getScore(item);
+      if (sc != null && sc > filterMaxScore) return false;
+    }
+    if (filterMaxRam !== null) {
+      if (item.ram_gb != null && item.ram_gb > filterMaxRam) return false;
+    }
+    return true;
+  }
+
   const q = query.trim().toLowerCase();
 
-  // Búsqueda texto sobremesas
-  const filteredDesktops = !q ? desktops : desktops.filter(d => [
+  // Búsqueda texto + filtros sobremesas
+  const filteredDesktops = desktops.filter(d => {
+    if (!passesFilters(d, dd => dd.cpu_id ? R.cpuScoreMap[dd.cpu_id] : null)) return false;
+    if (!q) return true;
+    return [
         d.hostname,
         R.roomMap[d.room_id],
         d.desktop_model_id ? R.dmMap[d.desktop_model_id] : null,
@@ -159,7 +197,8 @@ export default function Computers() {
         d.mac_address,
         d.equipment_user_id ? R.equipMap[d.equipment_user_id] : null,
         d.observations,
-      ].filter(Boolean).join(' ').toLowerCase().includes(q));
+      ].filter(Boolean).join(' ').toLowerCase().includes(q);
+  });
 
   // Ordenar
   const sortKeyMap = {
@@ -182,8 +221,11 @@ export default function Computers() {
 
 
   // Laptops: filtrado, orden y paginación
-  // Búsqueda texto portátiles
-  const filteredLaptops = !q ? laptops : laptops.filter(l => [
+  // Búsqueda texto + filtros portàtils
+  const filteredLaptops = laptops.filter(l => {
+    if (!passesFilters(l, ll => ll.cpu_benchmark_score ?? null)) return false;
+    if (!q) return true;
+    return [
         l.hostname,
         R.roomMap[l.room_id],
         l.laptop_model_id ? R.lmMap[l.laptop_model_id] : null,
@@ -197,7 +239,8 @@ export default function Computers() {
         l.serial_number,
         l.equipment_user_id ? R.equipMap[l.equipment_user_id] : null,
         l.observations,
-      ].filter(Boolean).join(' ').toLowerCase().includes(q));
+      ].filter(Boolean).join(' ').toLowerCase().includes(q);
+  });
 
   const laptopSortKeyMap = {
     hostname: l => l.hostname?.toLowerCase() ?? '',
@@ -237,21 +280,91 @@ export default function Computers() {
 
   return (
     <>
-      {/* SEARCH BAR */}
-      <div style={{ marginBottom: 24 }}>
-        <input
-          type="search"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="Cercar per hostname, aula, model, CPU, MAC…"
-          style={{ width: '100%', maxWidth: 480, padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 14 }}
-        />
-        {q && (
-          <span style={{ marginLeft: 12, fontSize: 13, color: 'var(--muted)' }}>
-            {filteredDesktops.length + filteredLaptops.length} resultat{filteredDesktops.length + filteredLaptops.length !== 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
+      {/* TOOLBAR: search + filter toggle */}
+      {(() => {
+        const activeCount = [filterCenterId, filterRoomId, scoreEnabled, ramEnabled].filter(Boolean).length;
+        return (
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: showFilters ? 0 : 20, flexWrap: 'wrap' }}>
+            <input
+              type="search"
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Cercar per hostname, aula, model, CPU, MAC…"
+              style={{ flex: '1 1 220px', maxWidth: 460, padding: '8px 12px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 14 }}
+            />
+            <button
+              onClick={() => setShowFilters(v => !v)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 14px', borderRadius: 6, fontSize: 13, cursor: 'pointer', fontWeight: 500,
+                border: `1px solid ${activeCount > 0 ? 'var(--primary, #007bff)' : 'var(--border)'}`,
+                background: activeCount > 0 ? 'rgba(0,123,255,0.07)' : '#fff',
+                color: activeCount > 0 ? 'var(--primary, #007bff)' : 'inherit',
+                transition: 'all .15s',
+              }}
+            >
+              <span style={{ fontSize: 12 }}>⠇</span>
+              Filtres
+              {activeCount > 0 && (
+                <span style={{ background: 'var(--primary, #007bff)', color: '#fff', borderRadius: 10, fontSize: 11, padding: '1px 6px', lineHeight: 1.4 }}>{activeCount}</span>
+              )}
+              <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 2 }}>{showFilters ? '▲' : '▼'}</span>
+            </button>
+            {(q || activeCount > 0) && (
+              <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap' }}>
+                {filteredDesktops.length + filteredLaptops.length} resultat{filteredDesktops.length + filteredLaptops.length !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* COMPOUND FILTERS — collapsible */}
+      {showFilters && (
+        <div style={{
+          background: '#fafafa', border: '1px solid var(--border)', borderRadius: 8,
+          padding: '14px 16px', marginBottom: 20,
+          display: 'flex', flexWrap: 'wrap', gap: '12px 24px', alignItems: 'center',
+        }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 500, whiteSpace: 'nowrap' }}>Ubicació:</span>
+            <select value={filterCenterId} onChange={e => { setFilterCenterId(e.target.value); setFilterRoomId(''); }}
+              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, background: '#fff', maxWidth: 160 }}>
+              <option value="">Tots els centres</option>
+              {R.centers.map(c => <option key={c.center_id} value={c.center_id}>{c.name}</option>)}
+            </select>
+            <select value={filterRoomId} onChange={e => setFilterRoomId(e.target.value)}
+              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border)', fontSize: 13, background: '#fff', maxWidth: 160 }}>
+              <option value="">Totes les aules</option>
+              {(filterCenterId ? R.allRooms.filter(r => r.center_id === Number(filterCenterId)) : R.allRooms)
+                .map(r => <option key={r.room_id} value={r.room_id}>{r.name}</option>)}
+            </select>
+          </div>
+          <div style={{ width: 1, height: 28, background: 'var(--border)', flexShrink: 0 }} />
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={scoreEnabled} onChange={e => setScoreEnabled(e.target.checked)} style={{ accentColor: 'var(--primary, #007bff)' }} />
+            <span style={{ color: 'var(--muted)', fontWeight: 500 }}>Score CPU</span>
+            <span>≤ <strong style={{ minWidth: 38, display: 'inline-block' }}>{sliderScore}</strong></span>
+            <input type="range" min={0} max={scoreMax} step={100} value={sliderScore}
+              onChange={e => { setSliderScore(Number(e.target.value)); setScoreEnabled(true); }}
+              style={{ width: 100, accentColor: 'var(--primary, #007bff)', cursor: 'pointer' }} />
+          </label>
+          <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            <input type="checkbox" checked={ramEnabled} onChange={e => setRamEnabled(e.target.checked)} style={{ accentColor: 'var(--primary, #007bff)' }} />
+            <span style={{ color: 'var(--muted)', fontWeight: 500 }}>RAM</span>
+            <span>≤ <strong style={{ minWidth: 32, display: 'inline-block' }}>{sliderRam} GB</strong></span>
+            <input type="range" min={1} max={ramMax} step={1} value={sliderRam}
+              onChange={e => { setSliderRam(Number(e.target.value)); setRamEnabled(true); }}
+              style={{ width: 80, accentColor: 'var(--primary, #007bff)', cursor: 'pointer' }} />
+          </label>
+          {[filterCenterId, filterRoomId, scoreEnabled, ramEnabled].some(Boolean) && (
+            <button className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto', fontSize: 12 }}
+              onClick={() => { setFilterCenterId(''); setFilterRoomId(''); setScoreEnabled(false); setRamEnabled(false); }}>
+              ✕ Netejar
+            </button>
+          )}
+        </div>
+      )}
 
       {/* STATS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 24 }}>
